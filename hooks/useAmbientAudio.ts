@@ -1,3 +1,4 @@
+import { Audio } from 'expo-av';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { useGameStore } from '../game/state/useGameStore';
@@ -7,11 +8,12 @@ import { useGameStore } from '../game/state/useGameStore';
 export function useAmbientAudio() {
 	const started = useRef(false);
 	const isMuted = useGameStore((s) => s.isMuted);
+	const sfxEnabled = useGameStore((s) => s.sfxEnabled);
 
 	useEffect(() => {
 		let cleanup: (() => void) | undefined;
-		if (isMuted) {
-			// If muted, stop any playing music
+		if (isMuted || !sfxEnabled) {
+			// If muted or SFX disabled, stop any playing music
 			if (Platform.OS === 'web' && started.current) {
 				import('tone').then((Tone) => {
 					Tone.Transport.stop();
@@ -116,5 +118,59 @@ export function useAmbientAudio() {
 		return () => {
 			if (cleanup) cleanup();
 		};
-	}, [isMuted]);
+	}, [isMuted, sfxEnabled]);
+}
+
+// Play a sound effect from the sfx folder with error handling
+// SFX will only play if both isMuted is false and sfxEnabled is true
+export async function playAmbientSFX(
+	file: string = '',
+	isMuted?: boolean,
+	sfxEnabled?: boolean
+) {
+	// Check mute and SFX state before playing
+	if (
+		typeof isMuted === 'undefined' ||
+		typeof sfxEnabled === 'undefined'
+	) {
+		console.error(
+			'isMuted and sfxEnabled must be provided to playAmbientSFX'
+		);
+		return;
+	}
+	if (isMuted || !sfxEnabled) {
+		return;
+	}
+	if (!file) {
+		console.error(
+			'No sound file specified for playAmbientSFX'
+		);
+		return;
+	}
+	try {
+		// Use a static import map for supported SFX files
+		const sfxMap: Record<string, any> = {
+			'jump.wav': require('../assets/sounds/sfx/jump.wav'),
+			'fall.wav': require('../assets/sounds/sfx/fall.wav'),
+			'milestone.wav': require('../assets/sounds/sfx/milestone.wav'),
+			'water-drop.mp3': require('../assets/sounds/sfx/water-drop.mp3'),
+		};
+		const sfx = sfxMap[file];
+		if (!sfx) {
+			console.error(
+				'SFX file not found in import map:',
+				file
+			);
+			return;
+		}
+		const { sound } = await Audio.Sound.createAsync(sfx);
+		await sound.playAsync();
+		sound.setOnPlaybackStatusUpdate((status) => {
+			if (!status.isLoaded || status.didJustFinish) {
+				sound.unloadAsync();
+			}
+		});
+	} catch (e) {
+		console.warn('Failed to play SFX:', file, e);
+	}
 }

@@ -14,6 +14,7 @@ export function useMusicPlayer() {
 		(s) => s.isMusicPlaying
 	);
 	const isMusicMuted = useGameStore((s) => s.isMusicMuted);
+	const isMuted = useGameStore((s) => s.isMuted);
 	const setMusicIndex = useGameStore(
 		(s) => s.setMusicIndex
 	);
@@ -21,26 +22,41 @@ export function useMusicPlayer() {
 		(s) => s.setIsMusicPlaying
 	);
 	const soundRef = useRef<Audio.Sound | null>(null);
+	const positionRef = useRef<number>(0); // Track playback position
 
 	// Load and play/pause music on state change
 	useEffect(() => {
 		let isMounted = true;
 		async function loadAndPlay() {
 			if (soundRef.current) {
+				// Save position before unloading
+				const status =
+					await soundRef.current.getStatusAsync();
+				if (status.isLoaded) {
+					positionRef.current = status.positionMillis || 0;
+				}
 				await soundRef.current.unloadAsync();
 				soundRef.current = null;
 			}
-			if (isMusicMuted || !isMusicPlaying) return;
-			// Only try to play if the file exists for the current index
+			if (isMusicMuted || isMuted || !isMusicPlaying)
+				return;
 			const file =
 				soundtrackFiles[musicIndex] || soundtrackFiles[0];
 			try {
 				const { sound } = await Audio.Sound.createAsync(
 					file,
-					{ shouldPlay: true, isLooping: true, volume: 1.0 }
+					{
+						shouldPlay: false,
+						isLooping: true,
+						volume: 1.0,
+					}
 				);
 				if (!isMounted) return;
 				soundRef.current = sound;
+				// Seek to previous position if available
+				if (positionRef.current > 0) {
+					await sound.setPositionAsync(positionRef.current);
+				}
 				await sound.playAsync();
 			} catch (e) {
 				console.warn('Music file failed to load/play:', e);
@@ -50,21 +66,47 @@ export function useMusicPlayer() {
 		return () => {
 			isMounted = false;
 			if (soundRef.current) {
+				soundRef.current.getStatusAsync().then((status) => {
+					if (status.isLoaded) {
+						positionRef.current =
+							status.positionMillis || 0;
+					}
+				});
 				soundRef.current.unloadAsync();
 				soundRef.current = null;
 			}
 		};
-	}, [musicIndex, isMusicPlaying, isMusicMuted]);
+	}, [musicIndex, isMusicPlaying, isMusicMuted, isMuted]);
 
 	// Pause/resume on play state change
 	useEffect(() => {
 		if (!soundRef.current) return;
-		if (isMusicPlaying && !isMusicMuted) {
-			soundRef.current.playAsync();
+		if (isMusicPlaying && !isMusicMuted && !isMuted) {
+			// Resume from last position
+			soundRef.current.getStatusAsync().then((status) => {
+				if (
+					soundRef.current &&
+					status.isLoaded &&
+					positionRef.current > 0
+				) {
+					soundRef.current.setPositionAsync(
+						positionRef.current
+					);
+				}
+				if (soundRef.current) {
+					soundRef.current.playAsync();
+				}
+			});
 		} else {
-			soundRef.current.pauseAsync();
+			// Save position and pause
+			soundRef.current.getStatusAsync().then((status) => {
+				if (soundRef.current && status.isLoaded) {
+					positionRef.current = status.positionMillis || 0;
+					soundRef.current.pauseAsync();
+				}
+			});
 		}
-	}, [isMusicPlaying, isMusicMuted]);
+	}, [isMusicPlaying, isMusicMuted, isMuted]);
 
 	// Cycle to next track (only cycle through available files)
 	const nextTrack = () => {

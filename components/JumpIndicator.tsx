@@ -55,6 +55,3 @@ export function JumpIndicator({
 		</View>
 	);
 }
-
-// If you want 3D jump indicators, you can use react-three-fiber here as well.
-// For now, this remains a 2D overlay. To integrate with 3D, consider moving this logic into the 3D Canvas scene.

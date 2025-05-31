@@ -7,6 +7,8 @@ export interface GameState {
 	narration: string | null;
 	milestone: boolean;
 	cosmeticUnlocks: string[];
+	streakScore: number; // Add streakScore to state
+	highScore: number; // Add highScore to state
 }
 
 export const initialState: GameState = {
@@ -18,4 +20,6 @@ export const initialState: GameState = {
 	narration: null,
 	milestone: false,
 	cosmeticUnlocks: [],
+	streakScore: 0, // Initialize streakScore
+	highScore: 0, // Initialize highScore
 };

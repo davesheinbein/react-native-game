@@ -1,7 +1,6 @@
-import { PlatformShape } from '@/components/PlatformShape';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Canvas } from '@react-three/fiber';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
 	Button,
 	FlatList,
@@ -10,13 +9,19 @@ import {
 	TouchableOpacity,
 	View,
 } from 'react-native';
+import { PlatformShape } from '../../components/PlatformShape';
 import { StickFigure } from '../../components/StickFigure';
+import { existentialChoices } from '../../constants/texts';
 import { soundtrackTitles } from '../../game/audio/music';
+import {
+	fallSound,
+	jumpSound,
+	milestoneSound,
+} from '../../game/audio/soundEffects';
 import { getClassicModeState } from '../../game/modes/classic';
 import { getEndlessModeState } from '../../game/modes/endless';
 import { getManiacModeState } from '../../game/modes/maniac';
 import { getPeacefulModeState } from '../../game/modes/peaceful';
-import { existentialChoices } from '../../game/narration/existentialChoices';
 import { GameState } from '../../game/state/gameState';
 import { useGameStore } from '../../game/state/useGameStore';
 import {
@@ -24,7 +29,11 @@ import {
 	getMilestoneNarration,
 } from '../../game/systems/narrationManager';
 import { getPlatformShape } from '../../game/systems/platformManager';
-import { useAmbientAudio } from '../../hooks/useAmbientAudio';
+import { setCurrentStreak } from '../../game/systems/scoreManager';
+import {
+	playAmbientSFX,
+	useAmbientAudio,
+} from '../../hooks/useAmbientAudio';
 import { useMusicPlayer } from '../../hooks/useMusicPlayer';
 
 const MODES = [
@@ -35,6 +44,19 @@ const MODES = [
 ] as const;
 
 type Mode = (typeof MODES)[number];
+
+const GLOBAL_TOP_SCORES = [
+	{ name: 'VoidWalker', score: 42 },
+	{ name: 'Existentialist', score: 37 },
+	{ name: 'JumpMaster', score: 33 },
+	{ name: 'Philosopher', score: 28 },
+	{ name: 'Stoic', score: 25 },
+	{ name: 'Nihilist', score: 22 },
+	{ name: 'Seeker', score: 20 },
+	{ name: 'Absurdist', score: 18 },
+	{ name: 'Sisyphus', score: 15 },
+	{ name: 'Newcomer', score: 12 },
+];
 
 function getNextState(
 	state: GameState,
@@ -123,24 +145,61 @@ export default function Index() {
 		resetGame,
 		isMuted,
 		setMuted,
+		sfxEnabled,
+		setSfxEnabled,
+		highScore,
+		setHighScore,
 	} = useGameStore();
-
 	const {
 		isMusicPlaying,
 		isMusicMuted,
 		musicIndex,
 		nextTrack,
 		setIsMusicPlaying,
+		setMusicIndex,
 	} = useMusicPlayer();
+
+	const [settingsOpen, setSettingsOpen] =
+		React.useState(false);
+	const [streak, setStreak] = React.useState(0);
+
+	// Sync streak and high score with scoreManager and state
+	useEffect(() => {
+		setCurrentStreak(streak);
+		if (streak > highScore) {
+			setHighScore(streak);
+		}
+	}, [streak]);
+
+	React.useEffect(() => {
+		setMuted(true);
+		setSfxEnabled(false);
+	}, []);
+
+	// --- AUTOPLAY song-1.wav on mount ---
+	const musicStarted = useRef(false);
+	useEffect(() => {
+		if (!musicStarted.current && !isMusicMuted) {
+			setMusicIndex(0); // song-1.wav is index 0
+			setIsMusicPlaying(true);
+			musicStarted.current = true;
+		}
+	}, [isMusicMuted, setIsMusicPlaying, setMusicIndex]);
+
+	// --- SOUND EFFECTS: play on jump/fall/milestone ---
+	const playSound = playAmbientSFX;
 
 	const [showChoices, setShowChoices] =
 		React.useState(false);
 
 	function handleJump(side: number) {
 		if (!safeSides.includes(side) && mode !== 'Peaceful') {
+			playSound(fallSound, isMuted, sfxEnabled);
+			// Only reset streak, do NOT reset high score
 			resetGame();
 			setNarration(getFallNarration());
 			setShowChoices(false);
+			setStreak(0);
 			return;
 		}
 		const next = getNextState(
@@ -153,6 +212,7 @@ export default function Index() {
 				narration,
 				milestone,
 				cosmeticUnlocks,
+				highScore, // Pass highScore to GameState
 			},
 			side
 		);
@@ -164,6 +224,8 @@ export default function Index() {
 		setMilestone(next.milestone);
 		setCosmeticUnlocks(next.cosmeticUnlocks);
 		setShowChoices(next.milestone);
+		setStreak((s) => s + 1); // Increment streak on success
+		playSound(jumpSound, isMuted, sfxEnabled);
 	}
 
 	function handleChoice(choice: string) {
@@ -205,53 +267,139 @@ export default function Index() {
 			setMilestone(false);
 			setShowChoices(false);
 		}
+		playSound(milestoneSound, isMuted, sfxEnabled);
 	}
+
+	const handleResetHighScore = () => {
+		setHighScore(0);
+		setStreak(0);
+	};
 
 	return (
 		<View style={styles.container}>
-			{/* SFX mute button in top right */}
 			<View
 				style={{
 					position: 'absolute',
 					top: 18,
 					right: 18,
-					flexDirection: 'row',
 					zIndex: 10,
 				}}
 			>
-				<TouchableOpacity
-					style={styles.muteButton}
-					onPress={() => setMuted(!isMuted)}
-					activeOpacity={0.7}
-				>
-					<MaterialCommunityIcons
-						name={isMuted ? 'volume-off' : 'record'}
-						size={28}
-						color='#ffd600'
-						accessibilityLabel={
-							isMuted ? 'Unmute SFX' : 'Mute SFX'
-						}
-					/>
-				</TouchableOpacity>
-				{/* Music play/pause button */}
-				<TouchableOpacity
-					style={[styles.muteButton, { marginLeft: 8 }]}
-					onPress={() => setIsMusicPlaying(!isMusicPlaying)}
-					activeOpacity={0.7}
-				>
-					<MaterialCommunityIcons
-						name={
-							isMusicPlaying ? 'pause-circle' : (
-								'play-circle'
-							)
-						}
-						size={28}
-						color='#b2dfdb'
-						accessibilityLabel={
-							isMusicPlaying ? 'Pause music' : 'Play music'
-						}
-					/>
-				</TouchableOpacity>
+				{!settingsOpen ?
+					<TouchableOpacity
+						onPress={() => setSettingsOpen(true)}
+						style={{
+							padding: 8,
+							backgroundColor: 'rgba(34,34,34,0.7)',
+							borderRadius: 24,
+							elevation: 4,
+						}}
+					>
+						<MaterialCommunityIcons
+							name='cog-outline'
+							size={32}
+							color='#ffd600'
+							accessibilityLabel='Open settings'
+						/>
+					</TouchableOpacity>
+				:	<View
+						style={{
+							flexDirection: 'row',
+							alignItems: 'center',
+							backgroundColor: 'rgba(34,34,34,0.92)',
+							borderRadius: 32,
+							paddingVertical: 10,
+							paddingHorizontal: 16,
+							shadowColor: '#000',
+							shadowOpacity: 0.18,
+							shadowRadius: 8,
+							elevation: 8,
+							gap: 18,
+							minWidth: 0,
+							transform: [
+								{ translateX: settingsOpen ? 0 : 200 },
+							],
+						}}
+					>
+						<TouchableOpacity
+							onPress={() => setSettingsOpen(false)}
+							style={{ padding: 6 }}
+						>
+							<MaterialCommunityIcons
+								name='close-circle-outline'
+								size={28}
+								color='#ffd600'
+								accessibilityLabel='Close settings'
+							/>
+						</TouchableOpacity>
+						<TouchableOpacity
+							onPress={() =>
+								setIsMusicPlaying(!isMusicPlaying)
+							}
+							style={{ padding: 6 }}
+						>
+							<MaterialCommunityIcons
+								name={
+									isMusicPlaying ?
+										'pause-circle-outline'
+									:	'play-circle-outline'
+								}
+								size={28}
+								color='#b2dfdb'
+								accessibilityLabel={
+									isMusicPlaying ? 'Pause music' : (
+										'Play music'
+									)
+								}
+							/>
+						</TouchableOpacity>
+						<TouchableOpacity
+							onPress={() => setMuted(!isMuted)}
+							style={{ padding: 6 }}
+						>
+							<MaterialCommunityIcons
+								name={
+									isMuted ? 'volume-off' : 'volume-high'
+								}
+								size={28}
+								color='#ffd600'
+								accessibilityLabel={
+									isMuted ? 'Unmute all' : 'Mute all'
+								}
+							/>
+						</TouchableOpacity>
+						<TouchableOpacity
+							onPress={() =>
+								setSfxEnabled && setSfxEnabled(!sfxEnabled)
+							}
+							style={{ padding: 6 }}
+						>
+							<MaterialCommunityIcons
+								name={
+									sfxEnabled ?
+										'bell-ring-outline'
+									:	'bell-off-outline'
+								}
+								size={26}
+								color='#ffd600'
+								accessibilityLabel={
+									sfxEnabled ? 'Disable SFX' : 'Enable SFX'
+								}
+							/>
+						</TouchableOpacity>
+						<TouchableOpacity
+							onPress={handleResetHighScore}
+							style={{ padding: 6 }}
+						>
+							<MaterialCommunityIcons
+								name='restore'
+								size={26}
+								color='#ffd600'
+								accessibilityLabel='Reset High Score'
+							/>
+						</TouchableOpacity>
+					</View>
+				}
 			</View>
 			<Text style={styles.title}>Don't Jump</Text>
 			<View
@@ -319,10 +467,23 @@ export default function Index() {
 			<Text style={styles.shape}>
 				Platform: {shape} ({sides} sides)
 			</Text>
-			<Text style={styles.music} onPress={nextTrack}>
+			<Text
+				style={styles.music}
+				onPress={() => {
+					useGameStore.getState().setIsMusicMuted &&
+						useGameStore.getState().setIsMusicMuted(false);
+					if (isMusicMuted)
+						useGameStore.getState().setIsMusicMuted(false);
+					if (!isMusicPlaying) setIsMusicPlaying(true);
+					nextTrack();
+				}}
+			>
 				🎵 {soundtrackTitles[musicIndex]} (tap to change)
 			</Text>
 			<Text style={styles.narration}>{narration}</Text>
+			<Text style={styles.streak}>
+				Streak: {streak} | High Score: {highScore}
+			</Text>
 			<View style={styles.buttonRow}>
 				{Array.from({ length: sides }).map((_, i) => (
 					<View key={i} style={styles.buttonWrapper}>
@@ -338,12 +499,15 @@ export default function Index() {
 					</View>
 				))}
 			</View>
+			{/* Existential choices: show only the current set of 3 */}
 			{showChoices && (
 				<View style={styles.choices}>
 					<Text style={styles.choicesTitle}>
 						Existential Choice:
 					</Text>
-					{existentialChoices.map((choice) => (
+					{existentialChoices[
+						(round / 20) % existentialChoices.length | 0
+					].map((choice) => (
 						<Button
 							key={choice.label}
 							title={choice.label}
@@ -369,6 +533,28 @@ export default function Index() {
 					/>
 				</View>
 			)}
+			{/* Scoreboard at the bottom */}
+			<View style={styles.scoreboardContainer}>
+				<Text style={styles.scoreboardTitle}>
+					Top 10 Global Streaks
+				</Text>
+				{GLOBAL_TOP_SCORES.map((entry, idx) => (
+					<View
+						key={entry.name}
+						style={styles.scoreboardRow}
+					>
+						<Text style={styles.scoreboardRank}>
+							{idx + 1}.
+						</Text>
+						<Text style={styles.scoreboardName}>
+							{entry.name}
+						</Text>
+						<Text style={styles.scoreboardScore}>
+							{entry.score}
+						</Text>
+					</View>
+				))}
+			</View>
 		</View>
 	);
 }
@@ -436,13 +622,39 @@ const styles = StyleSheet.create({
 		marginHorizontal: 6,
 		fontSize: 16,
 	},
-	muteButton: {
-		position: 'absolute',
-		top: 18,
-		right: 18,
-		zIndex: 10,
-		backgroundColor: '#222b',
-		borderRadius: 20,
-		padding: 6,
+	streak: {
+		color: '#ffd600',
+		fontSize: 20,
+		fontWeight: 'bold',
+		marginBottom: 4,
+	},
+	scoreboardContainer: {
+		marginTop: 18,
+		width: '100%',
+		alignItems: 'center',
+		backgroundColor: '#222a',
+		borderRadius: 10,
+		padding: 8,
+	},
+	scoreboardTitle: {
+		color: '#fff',
+		fontWeight: 'bold',
+		fontSize: 16,
+		marginBottom: 4,
+	},
+	scoreboardRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		width: '90%',
+		justifyContent: 'space-between',
+		paddingVertical: 2,
+	},
+	scoreboardRank: { color: '#ffd600', width: 24 },
+	scoreboardName: { color: '#fff', flex: 1 },
+	scoreboardScore: {
+		color: '#4caf50',
+		fontWeight: 'bold',
+		width: 32,
+		textAlign: 'right',
 	},
 });

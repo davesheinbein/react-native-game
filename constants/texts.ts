@@ -228,12 +228,12 @@ export function randomQuip(arr: { text: string }[]): {
 	return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// Consolidated narrations
+// Consolidated narrations as
+// PowerUps options one time per every 20 levels
+// Each set of 3 choices represents a different philosophical approach
+// each choice comes with it's own unique characteristics that will affect the gameplay
+// the player can choose one of these options to change the course of the game
 export const existentialChoices = [
-	// Powerup options one time per every 20 levels
-	// Each set of 3 choices represents a different philosophical approach
-	// each choice comes with it's own unique characteristics that will affect the gameplay
-	// the player can choose one of these options to change the course of the game
 	[
 		{
 			label: 'Accept fate',
@@ -261,8 +261,9 @@ export const existentialChoices = [
 			description:
 				'Double points for the next 5 rounds, but platforms are smaller amount of safe platforms reduced in half.',
 		},
+		// more of a cosmetic powerup than useful one
 		{
-			label: 'Slow time', // more of a cosmetic powerup than useful one
+			label: 'Slow time',
 			description:
 				'Everything moves in slow motion for 10 seconds.',
 		},
@@ -290,12 +291,13 @@ export const existentialChoices = [
 			description:
 				'Erase your last 2 falls from the record.',
 		},
+		// more of a narrative powerup
+		// could be a random quote or a hint about the next milestone
+		// or a hint about the next platform's safe direction'
 		{
 			label: 'Cosmic insight',
 			description:
-				'Get a philosophical hint about the next milestone.', // more of a narrative powerup
-			// could be a random quote or a hint about the next milestone
-			// or a hint about the next platform's safe direction'
+				'Get a philosophical hint about the next milestone.',
 		},
 		{
 			label: 'Shadow step',

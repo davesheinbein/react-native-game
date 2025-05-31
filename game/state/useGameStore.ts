@@ -23,6 +23,14 @@ interface GameStore extends GameState {
 	setIsMusicPlaying: (playing: boolean) => void;
 	isMusicMuted: boolean;
 	setIsMusicMuted: (muted: boolean) => void;
+	// SFX enabled state
+	sfxEnabled: boolean;
+	setSfxEnabled: (enabled: boolean) => void;
+	// High score state
+	streakScore: number;
+	setStreakScore: (score: number) => void;
+	highScore: number;
+	setHighScore: (score: number) => void;
 }
 
 export const useGameStore = create<GameStore>(
@@ -57,5 +65,15 @@ export const useGameStore = create<GameStore>(
 		isMusicMuted: false,
 		setIsMusicMuted: (muted) =>
 			set({ isMusicMuted: muted }),
+		// SFX enabled state
+		sfxEnabled: false,
+		setSfxEnabled: (enabled) =>
+			set({ sfxEnabled: enabled }),
+		// Streak score state
+		streakScore: 0,
+		setStreakScore: (streakScore) => set({ streakScore }),
+		// High score state
+		highScore: 0,
+		setHighScore: (score) => set({ highScore: score }),
 	})
 );
