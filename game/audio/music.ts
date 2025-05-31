@@ -1,4 +1,1 @@
-export const soundtrackTitles = [
-	'song-1.wav',
-	'song-2.wav',
-];
+export const soundtrackTitles = ['song 1', 'song 2'];

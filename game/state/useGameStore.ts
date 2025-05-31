@@ -31,6 +31,11 @@ interface GameStore extends GameState {
 	setStreakScore: (score: number) => void;
 	highScore: number;
 	setHighScore: (score: number) => void;
+	// Settings UI state
+	settingsOpen: boolean;
+	setSettingsOpen: (open: boolean) => void;
+	showChoices: boolean;
+	setShowChoices: (show: boolean) => void;
 }
 
 export const useGameStore = create<GameStore>(
@@ -75,5 +80,10 @@ export const useGameStore = create<GameStore>(
 		// High score state
 		highScore: 0,
 		setHighScore: (score) => set({ highScore: score }),
+		// Settings UI state
+		settingsOpen: false,
+		setSettingsOpen: (open) => set({ settingsOpen: open }),
+		showChoices: false,
+		setShowChoices: (show) => set({ showChoices: show }),
 	})
 );
