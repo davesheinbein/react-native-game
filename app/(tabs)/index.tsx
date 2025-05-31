@@ -1,26 +1,31 @@
-import React, { useState } from 'react';
+import { PlatformShape } from '@/components/PlatformShape';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Canvas } from '@react-three/fiber';
+import React from 'react';
 import {
 	Button,
 	FlatList,
 	StyleSheet,
 	Text,
+	TouchableOpacity,
 	View,
 } from 'react-native';
+import { StickFigure } from '../../components/StickFigure';
 import { soundtrackTitles } from '../../game/audio/music';
 import { getClassicModeState } from '../../game/modes/classic';
 import { getEndlessModeState } from '../../game/modes/endless';
 import { getManiacModeState } from '../../game/modes/maniac';
 import { getPeacefulModeState } from '../../game/modes/peaceful';
 import { existentialChoices } from '../../game/narration/existentialChoices';
-import {
-	GameState,
-	initialState,
-} from '../../game/state/gameState';
+import { GameState } from '../../game/state/gameState';
+import { useGameStore } from '../../game/state/useGameStore';
 import {
 	getFallNarration,
 	getMilestoneNarration,
 } from '../../game/systems/narrationManager';
 import { getPlatformShape } from '../../game/systems/platformManager';
+import { useAmbientAudio } from '../../hooks/useAmbientAudio';
+import { useMusicPlayer } from '../../hooks/useMusicPlayer';
 
 const MODES = [
 	'Classic',
@@ -97,104 +102,204 @@ function getNextState(
 }
 
 export default function Index() {
-	const [mode, setMode] = useState<Mode>('Classic');
-	const [state, setState] = useState<GameState>({
-		...initialState,
+	useAmbientAudio();
+	const {
 		mode,
-		shape: getPlatformShape(initialState.sides),
-	});
-	const [showChoices, setShowChoices] = useState(false);
-	const [musicIdx, setMusicIdx] = useState(0);
+		shape,
+		sides,
+		safeSides,
+		round,
+		narration,
+		milestone,
+		cosmeticUnlocks,
+		setMode,
+		setShape,
+		setSides,
+		setSafeSides,
+		setNarration,
+		setMilestone,
+		setCosmeticUnlocks,
+		nextRound,
+		resetGame,
+		isMuted,
+		setMuted,
+	} = useGameStore();
 
-	// Handle jump
+	const {
+		isMusicPlaying,
+		isMusicMuted,
+		musicIndex,
+		nextTrack,
+		setIsMusicPlaying,
+	} = useMusicPlayer();
+
+	const [showChoices, setShowChoices] =
+		React.useState(false);
+
 	function handleJump(side: number) {
-		if (
-			!state.safeSides.includes(side) &&
-			state.mode !== 'Peaceful'
-		) {
-			setState({
-				...initialState,
-				mode,
-				shape: getPlatformShape(initialState.sides),
-				narration: getFallNarration(),
-			});
+		if (!safeSides.includes(side) && mode !== 'Peaceful') {
+			resetGame();
+			setNarration(getFallNarration());
 			setShowChoices(false);
 			return;
 		}
-		const next = getNextState(state, side);
-		setState(next);
+		const next = getNextState(
+			{
+				mode,
+				shape,
+				sides,
+				safeSides,
+				round,
+				narration,
+				milestone,
+				cosmeticUnlocks,
+			},
+			side
+		);
+		setMode(next.mode);
+		setShape(next.shape);
+		setSides(next.sides);
+		setSafeSides(next.safeSides);
+		setNarration(next.narration);
+		setMilestone(next.milestone);
+		setCosmeticUnlocks(next.cosmeticUnlocks);
 		setShowChoices(next.milestone);
 	}
 
-	// Handle existential choice
 	function handleChoice(choice: string) {
 		if (choice === 'Embrace oblivion') {
-			// Skip ahead 10 rounds, randomize safe sides
-			let nextRound = state.round + 10;
+			let nextRound = round + 10;
 			let modeState;
-			switch (state.mode) {
+			switch (mode) {
 				case 'Classic':
-					modeState = getClassicModeState(
-						nextRound,
-						state.sides
-					);
+					modeState = getClassicModeState(nextRound, sides);
 					break;
 				case 'Endless':
-					modeState = getEndlessModeState(
-						nextRound,
-						state.sides
-					);
+					modeState = getEndlessModeState(nextRound, sides);
 					break;
 				case 'Maniac':
 					modeState = getManiacModeState();
 					break;
 				case 'Peaceful':
-					modeState = getPeacefulModeState(state.sides);
+					modeState = getPeacefulModeState(sides);
 					break;
 				default:
-					modeState = getClassicModeState(
-						nextRound,
-						state.sides
-					);
+					modeState = getClassicModeState(nextRound, sides);
 			}
-			setState({
-				...state,
-				round: nextRound,
-				shape: getPlatformShape(modeState.sides),
-				sides: modeState.sides,
-				safeSides: modeState.safeSides,
-				narration: getMilestoneNarration(nextRound),
-				milestone: false,
-			});
+			setSides(modeState.sides);
+			setSafeSides(modeState.safeSides);
+			setNarration(getMilestoneNarration(nextRound));
+			setMilestone(false);
+			setShowChoices(false);
 		} else if (choice === 'Question meaning') {
-			// Unlock cosmetic and show deep narration
-			setState({
-				...state,
-				cosmeticUnlocks: [
-					...state.cosmeticUnlocks,
-					'Shadow Cat',
-				],
-				narration:
-					'You stare into the void. The void stares back. You unlock a Shadow Cat.',
-				milestone: false,
-			});
+			setCosmeticUnlocks([
+				...cosmeticUnlocks,
+				'Shadow Cat',
+			]);
+			setNarration(
+				'You stare into the void. The void stares back. You unlock a Shadow Cat.'
+			);
+			setMilestone(false);
+			setShowChoices(false);
 		} else {
-			// Accept fate: continue as normal
-			setState({ ...state, milestone: false });
+			setMilestone(false);
+			setShowChoices(false);
 		}
-		setShowChoices(false);
-	}
-
-	// Music cycling (mockup)
-	function nextTrack() {
-		setMusicIdx(
-			(idx) => (idx + 1) % soundtrackTitles.length
-		);
 	}
 
 	return (
 		<View style={styles.container}>
+			{/* SFX mute button in top right */}
+			<View
+				style={{
+					position: 'absolute',
+					top: 18,
+					right: 18,
+					flexDirection: 'row',
+					zIndex: 10,
+				}}
+			>
+				<TouchableOpacity
+					style={styles.muteButton}
+					onPress={() => setMuted(!isMuted)}
+					activeOpacity={0.7}
+				>
+					<MaterialCommunityIcons
+						name={isMuted ? 'volume-off' : 'record'}
+						size={28}
+						color='#ffd600'
+						accessibilityLabel={
+							isMuted ? 'Unmute SFX' : 'Mute SFX'
+						}
+					/>
+				</TouchableOpacity>
+				{/* Music play/pause button */}
+				<TouchableOpacity
+					style={[styles.muteButton, { marginLeft: 8 }]}
+					onPress={() => setIsMusicPlaying(!isMusicPlaying)}
+					activeOpacity={0.7}
+				>
+					<MaterialCommunityIcons
+						name={
+							isMusicPlaying ? 'pause-circle' : (
+								'play-circle'
+							)
+						}
+						size={28}
+						color='#b2dfdb'
+						accessibilityLabel={
+							isMusicPlaying ? 'Pause music' : 'Play music'
+						}
+					/>
+				</TouchableOpacity>
+			</View>
 			<Text style={styles.title}>Don't Jump</Text>
+			<View
+				style={{ alignItems: 'center', marginBottom: 16 }}
+			>
+				<Canvas
+					style={{
+						width: 180,
+						height: 180,
+						backgroundColor: 'transparent',
+						borderRadius: 16,
+					}}
+					camera={{
+						position: [0, 3, 7],
+						fov: 50,
+						near: 0.1,
+						far: 100,
+					}}
+					shadows={false}
+					frameloop='demand'
+				>
+					<ambientLight intensity={1.0} />
+					<directionalLight
+						position={[5, 10, 7]}
+						intensity={1.0}
+						castShadow={false}
+					/>
+					<StickFigure />
+				</Canvas>
+				<Canvas
+					style={{
+						width: 180,
+						height: 180,
+						backgroundColor: 'transparent',
+						borderRadius: 16,
+					}}
+					camera={{
+						position: [0, 3, 7],
+						fov: 50,
+						near: 0.1,
+						far: 100,
+					}}
+					shadows={false}
+					frameloop='demand'
+				>
+					<PlatformShape sides={sides} />
+				</Canvas>
+			</View>
 			<View style={styles.modeRow}>
 				{MODES.map((m) => (
 					<Button
@@ -203,37 +308,31 @@ export default function Index() {
 						color={mode === m ? '#4caf50' : '#333'}
 						onPress={() => {
 							setMode(m);
-							setState({
-								...initialState,
-								mode: m,
-								shape: getPlatformShape(initialState.sides),
-							});
+							resetGame();
+							setShape(getPlatformShape(3));
 							setShowChoices(false);
 						}}
 					/>
 				))}
 			</View>
-			<Text style={styles.round}>Round: {state.round}</Text>
+			<Text style={styles.round}>Round: {round}</Text>
 			<Text style={styles.shape}>
-				Platform: {state.shape} ({state.sides} sides)
+				Platform: {shape} ({sides} sides)
 			</Text>
 			<Text style={styles.music} onPress={nextTrack}>
-				🎵 {soundtrackTitles[musicIdx]} (tap to change)
+				🎵 {soundtrackTitles[musicIndex]} (tap to change)
 			</Text>
-			<Text style={styles.narration}>
-				{state.narration}
-			</Text>
+			<Text style={styles.narration}>{narration}</Text>
 			<View style={styles.buttonRow}>
-				{Array.from({ length: state.sides }).map((_, i) => (
+				{Array.from({ length: sides }).map((_, i) => (
 					<View key={i} style={styles.buttonWrapper}>
 						<Button
 							title={`Jump Side ${i + 1}`}
 							onPress={() => handleJump(i)}
 							color={
-								state.safeSides.includes(i) &&
-								state.mode !== 'Maniac'
-									? '#4caf50'
-									: '#222'
+								safeSides.includes(i) && mode !== 'Maniac' ?
+									'#4caf50'
+								:	'#222'
 							}
 						/>
 					</View>
@@ -253,13 +352,13 @@ export default function Index() {
 					))}
 				</View>
 			)}
-			{state.cosmeticUnlocks.length > 0 && (
+			{cosmeticUnlocks.length > 0 && (
 				<View style={styles.cosmetics}>
 					<Text style={styles.cosmeticsTitle}>
 						Unlocked Cosmetics:
 					</Text>
 					<FlatList
-						data={state.cosmeticUnlocks}
+						data={cosmeticUnlocks}
 						keyExtractor={(item) => item}
 						renderItem={({ item }) => (
 							<Text style={styles.cosmeticItem}>
@@ -336,5 +435,14 @@ const styles = StyleSheet.create({
 		color: '#ffd600',
 		marginHorizontal: 6,
 		fontSize: 16,
+	},
+	muteButton: {
+		position: 'absolute',
+		top: 18,
+		right: 18,
+		zIndex: 10,
+		backgroundColor: '#222b',
+		borderRadius: 20,
+		padding: 6,
 	},
 });

@@ -2,7 +2,7 @@ import {
 	existentialChoices,
 	fallNarrations,
 	milestoneNarrations,
-} from '../narration/falls';
+} from '../../constants/texts';
 
 export function getFallNarration() {
 	return fallNarrations[
