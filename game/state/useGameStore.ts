@@ -36,6 +36,11 @@ interface GameStore extends GameState {
 	setSettingsOpen: (open: boolean) => void;
 	showChoices: boolean;
 	setShowChoices: (show: boolean) => void;
+	// Top scores state
+	topScores: { name: string; score: number }[];
+	setTopScores: (
+		scores: { name: string; score: number }[]
+	) => void;
 }
 
 export const useGameStore = create<GameStore>(
@@ -51,7 +56,10 @@ export const useGameStore = create<GameStore>(
 			set({ cosmeticUnlocks }),
 		nextRound: () =>
 			set((state) => ({ round: state.round + 1 })),
-		resetGame: () => set({ ...initialState }),
+		resetGame: () => {
+			const { highScore, topScores } = get();
+			set({ ...initialState, highScore, topScores });
+		},
 		// Audio mute state, default true (music starts muted)
 		isMuted: true,
 		setMuted: (muted) => set({ isMuted: muted }),
@@ -85,5 +93,8 @@ export const useGameStore = create<GameStore>(
 		setSettingsOpen: (open) => set({ settingsOpen: open }),
 		showChoices: false,
 		setShowChoices: (show) => set({ showChoices: show }),
+		// Top scores state
+		topScores: [],
+		setTopScores: (scores) => set({ topScores: scores }),
 	})
 );

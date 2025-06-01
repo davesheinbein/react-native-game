@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { gameStyles } from './gameStyles';
+import { gameStyles } from '../constants/gameStyles';
 
 export default function NotFound() {
 	return (

@@ -1,6 +1,6 @@
 export const platformModels = {
-	Triangle: 'triangleModel',
-	Square: 'squareModel',
-	Hexagon: 'hexagonModel',
-	Octagon: 'octagonModel',
+	Tetrahedron: 'tetrahedronModel',
+	Cube: 'cubeModel',
+	HexagonalPrism: 'hexagonalPrismModel',
+	OctagonalPrism: 'octagonalPrismModel',
 };

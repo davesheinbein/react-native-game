@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, View } from 'react-native';
-import { gameStyles } from '../app/gameStyles';
+import { gameStyles } from '../constants/gameStyles';
 
 export function ModeSelector({
 	mode,
@@ -10,10 +10,20 @@ export function ModeSelector({
 	setShowChoices,
 	MODES,
 	getPlatformShape,
+	setHighScore,
+}: {
+	mode: string;
+	setMode: (mode: string) => void;
+	resetGame: () => void;
+	setShape: (shape: string) => void;
+	setShowChoices: (show: boolean) => void;
+	MODES: string[];
+	getPlatformShape: (sides: number) => string;
+	setHighScore: (score: number) => void;
 }) {
 	return (
 		<View style={gameStyles.modeRow}>
-			{MODES.map((m) => (
+			{MODES.map((m: string) => (
 				<Button
 					key={m}
 					title={m}
@@ -21,6 +31,7 @@ export function ModeSelector({
 					onPress={() => {
 						setMode(m);
 						resetGame();
+						setHighScore(0); // Reset high score when swapping modes
 						setShape(getPlatformShape(3));
 						setShowChoices(false);
 					}}

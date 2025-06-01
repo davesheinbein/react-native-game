@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, View } from 'react-native';
-import { gameStyles } from '../app/gameStyles';
+import { gameStyles } from '../constants/gameStyles';
 
 export function JumpButtons({
 	sides,

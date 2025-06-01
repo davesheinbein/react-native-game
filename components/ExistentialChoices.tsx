@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Text, View } from 'react-native';
-import { gameStyles } from '../app/gameStyles';
+import { gameStyles } from '../constants/gameStyles';
 
 export function ExistentialChoices({
 	showChoices,

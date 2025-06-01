@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Button, Text, View } from 'react-native';
-import { gameStyles } from './gameStyles';
+import { gameStyles } from '../constants/gameStyles';
 
 export default function MainMenu() {
 	const router = useRouter();

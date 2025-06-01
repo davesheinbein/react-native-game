@@ -1,16 +1,27 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { gameStyles } from '../app/gameStyles';
+import { gameStyles } from '../constants/gameStyles';
 
-export function Scoreboard({ scores }) {
+interface ScoreEntry {
+	name: string;
+	score: number;
+}
+
+export function Scoreboard({
+	scores,
+	title = 'Top 10 Streaks',
+}: {
+	scores: ScoreEntry[];
+	title?: string;
+}) {
 	return (
 		<View style={gameStyles.scoreboardContainer}>
 			<Text style={gameStyles.scoreboardTitle}>
-				Top 10 Global Streaks
+				{title}
 			</Text>
-			{scores.map((entry, idx) => (
+			{scores.map((entry: ScoreEntry, idx: number) => (
 				<View
-					key={entry.name}
+					key={entry.name + entry.score + idx}
 					style={gameStyles.scoreboardRow}
 				>
 					<Text style={gameStyles.scoreboardRank}>

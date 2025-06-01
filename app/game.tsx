@@ -1,42 +1,30 @@
+import { StickFigure } from '@/components/StickFigure';
 import { Canvas } from '@react-three/fiber';
 import React, { useEffect, useRef } from 'react';
 import { Text, View } from 'react-native';
 import { CosmeticUnlocks } from '../components/CosmeticUnlocks';
 import { ExistentialChoices } from '../components/ExistentialChoices';
+import { HighScoreModal } from '../components/HighScoreModal';
 import { JumpButtons } from '../components/JumpButtons';
 import { ModeSelector } from '../components/ModeSelector';
-import { PlatformShape } from '../components/PlatformShape';
-import { Scoreboard } from '../components/Scoreboard';
+import { ScoreboardTabs } from '../components/ScoreboardTabs';
 import { SettingsPanel } from '../components/SettingsPanel';
-import { StickFigure } from '../components/StickFigure';
-import {
-	CLASSIC_MODE,
-	ENDLESS_MODE,
-	MANIAC_MODE,
-	MILESTONE_INTERVALS_CLASSIC,
-	MILESTONE_INTERVALS_ENDLESS,
-	MILESTONE_INTERVALS_MANIAC,
-	MILESTONE_INTERVALS_PEACEFUL,
-	PEACEFUL_MODE,
-} from '../constants/config';
+import { MODES } from '../constants/config';
+import { gameStyles } from '../constants/gameStyles';
 import { existentialChoices } from '../constants/texts';
 import { soundtrackTitles } from '../game/audio/music';
 import {
-	fallSound,
-	jumpSound,
-	milestoneSound,
-} from '../game/audio/soundEffects';
-import { getClassicModeState } from '../game/modes/classic';
-import { getEndlessModeState } from '../game/modes/endless';
-import { getManiacModeState } from '../game/modes/maniac';
-import { getPeacefulModeState } from '../game/modes/peaceful';
-import { GameState } from '../game/state/gameState';
+	getStat,
+	saveStat,
+	updateHighScoreEverywhere,
+} from '../game/state/localStats';
+import { fetchLeaderboard } from '../game/state/supabaseLeaderboard';
 import { useGameStore } from '../game/state/useGameStore';
 import {
-	getFallNarration,
-	getMilestoneNarration,
-} from '../game/systems/narrationManager';
-import { getPlatformShape } from '../game/systems/platformManager';
+	getMilestoneIntervals,
+	handleChoice as handleChoiceManager,
+} from '../game/systems/gameManager';
+import { handleJump as handleJumpManager } from '../game/systems/jumpManager';
 import { setCurrentStreak } from '../game/systems/scoreManager';
 import {
 	playAmbientSFX,
@@ -47,111 +35,11 @@ import {
 	playFallNarration,
 	playMilestoneNarration,
 } from '../hooks/useNarrationPlayer';
-import { gameStyles } from './gameStyles';
-
-const MODES = [
-	CLASSIC_MODE,
-	ENDLESS_MODE,
-	MANIAC_MODE,
-	PEACEFUL_MODE,
-] as const;
+import { supabase } from '../utils/supabase';
 
 type Mode = (typeof MODES)[number];
 
-const GLOBAL_TOP_SCORES = [
-	{ name: 'VoidWalker', score: 42 },
-	{ name: 'Existentialist', score: 37 },
-	{ name: 'JumpMaster', score: 33 },
-	{ name: 'Philosopher', score: 28 },
-	{ name: 'Stoic', score: 25 },
-	{ name: 'Nihilist', score: 22 },
-	{ name: 'Seeker', score: 20 },
-	{ name: 'Absurdist', score: 18 },
-	{ name: 'Sisyphus', score: 15 },
-	{ name: 'Newcomer', score: 12 },
-];
-
-function getNextState(
-	state: GameState,
-	chosenSide: number
-): GameState {
-	let survived = state.safeSides.includes(chosenSide);
-	let nextRound = survived ? state.round + 1 : state.round;
-	let milestone =
-		survived &&
-		getMilestoneIntervals(state.mode).includes(nextRound);
-	let narration = null;
-	let cosmeticUnlocks = state.cosmeticUnlocks;
-
-	if (!survived) {
-		narration = getFallNarration();
-	} else if (milestone) {
-		narration = getMilestoneNarration(nextRound);
-		// Cosmetic unlock for 'Question meaning' choice (simulate)
-		if (state.mode === 'Classic' && nextRound % 20 === 0) {
-			cosmeticUnlocks = [
-				...cosmeticUnlocks,
-				'Glowing Aura',
-			];
-		}
-	}
-
-	// Determine next platform state
-	let modeState;
-	switch (state.mode) {
-		case 'Classic':
-			modeState = getClassicModeState(
-				nextRound,
-				state.sides
-			);
-			break;
-		case 'Endless':
-			modeState = getEndlessModeState(
-				nextRound,
-				state.sides
-			);
-			break;
-		case 'Maniac':
-			modeState = getManiacModeState();
-			break;
-		case 'Peaceful':
-			modeState = getPeacefulModeState(state.sides);
-			break;
-		default:
-			modeState = getClassicModeState(
-				nextRound,
-				state.sides
-			);
-	}
-
-	return {
-		...state,
-		round: survived ? nextRound : 1,
-		shape: getPlatformShape(modeState.sides),
-		sides: modeState.sides,
-		safeSides: modeState.safeSides,
-		narration,
-		milestone: !!milestone,
-		cosmeticUnlocks,
-	};
-}
-
-function getMilestoneIntervals(mode: string) {
-	switch (mode) {
-		case CLASSIC_MODE:
-			return MILESTONE_INTERVALS_CLASSIC;
-		case ENDLESS_MODE:
-			return MILESTONE_INTERVALS_ENDLESS;
-		case MANIAC_MODE:
-			return MILESTONE_INTERVALS_MANIAC;
-		case PEACEFUL_MODE:
-			return MILESTONE_INTERVALS_PEACEFUL;
-		default:
-			return MILESTONE_INTERVALS_CLASSIC;
-	}
-}
-
-export default function GamePage() {
+export default function Game() {
 	useAmbientAudio();
 	const {
 		mode,
@@ -189,20 +77,92 @@ export default function GamePage() {
 		setIsMusicPlaying,
 		isMusicMuted,
 		setIsMusicMuted,
+		setTopScores, // <-- add this
 	} = useGameStore();
 	const { nextTrack } = useMusicPlayer();
+	const topScores = useGameStore(
+		(state) => state.topScores
+	);
+	const [localScores, setLocalScores] = React.useState<
+		{ name: string; score: number }[]
+	>(() => {
+		const val = getStat<{ name: string; score: number }[]>(
+			'bestStreaks',
+			[]
+		);
+		return Array.isArray(val) ? val : [];
+	});
+
+	// --- High Score Modal State ---
+	const [showHighScoreModal, setShowHighScoreModal] =
+		React.useState(false);
+	const [pendingScore, setPendingScore] = React.useState<
+		number | null
+	>(null);
+	const [pendingType, setPendingType] = React.useState<
+		'local' | 'global' | 'both' | null
+	>(null);
+	const [lastMissedScore, setLastMissedScore] =
+		React.useState<number | null>(null);
+
+	// --- Detect if a miss happened and if it qualifies for leaderboard ---
+	const prevStreakRef = React.useRef(streakScore);
+	useEffect(() => {
+		// Detect a miss: streakScore reset to 0 but was > 0 before
+		if (prevStreakRef.current > 0 && streakScore === 0) {
+			const justMissedScore = prevStreakRef.current;
+			setLastMissedScore(justMissedScore);
+			// Check if qualifies for local/global leaderboard
+			let qualifiesLocal = false;
+			let qualifiesGlobal = false;
+			const localSorted =
+				Array.isArray(localScores) ? [...localScores] : [];
+			if (
+				localSorted.length < 10 ||
+				(justMissedScore > 0 &&
+					justMissedScore >
+						localSorted[localSorted.length - 1]?.score)
+			) {
+				qualifiesLocal = true;
+			}
+			const globalSorted =
+				Array.isArray(topScores) ? [...topScores] : [];
+			if (
+				globalSorted.length < 10 ||
+				(justMissedScore > 0 &&
+					justMissedScore >
+						globalSorted[globalSorted.length - 1]?.score)
+			) {
+				qualifiesGlobal = true;
+			}
+			if (qualifiesLocal || qualifiesGlobal) {
+				setPendingScore(justMissedScore);
+				if (qualifiesLocal && qualifiesGlobal)
+					setPendingType('both');
+				else if (qualifiesLocal) setPendingType('local');
+				else setPendingType('global');
+				setShowHighScoreModal(true);
+			}
+		}
+		prevStreakRef.current = streakScore;
+	}, [streakScore, localScores, topScores]);
 
 	useEffect(() => {
 		setCurrentStreak(streakScore);
 		if (streakScore > highScore) {
 			setHighScore(streakScore);
 		}
-	}, [streakScore]);
-
-	React.useEffect(() => {
-		setMuted(true);
-		setSfxEnabled(false);
-	}, []);
+		// Remove all leaderboard updates here. Only update in handleHighScoreSubmit.
+	}, [
+		streakScore,
+		highScore,
+		setCurrentStreak,
+		setHighScore,
+		topScores,
+		setTopScores,
+		localScores,
+		setLocalScores,
+	]);
 
 	const musicStarted = useRef(false);
 	useEffect(() => {
@@ -215,94 +175,31 @@ export default function GamePage() {
 
 	const playSound = playAmbientSFX;
 
-	function handleJump(side: number) {
-		if (!safeSides.includes(side) && mode !== 'Peaceful') {
-			playSound(fallSound, isMuted, sfxEnabled);
-			playFallNarration();
-			resetGame();
-			setNarration(getFallNarration());
-			setShowChoices(false);
-			setStreakScore(0);
-			return;
-		}
-		const next = getNextState(
-			{
-				mode,
-				shape,
-				sides,
-				safeSides,
-				round,
-				narration,
-				milestone,
-				cosmeticUnlocks,
-				streakScore,
-				highScore,
-			},
-			side
-		);
-		setMode(next.mode);
-		setShape(next.shape);
-		setSides(next.sides);
-		setSafeSides(next.safeSides);
-		setNarration(next.narration);
-		setMilestone(next.milestone);
-		setCosmeticUnlocks(next.cosmeticUnlocks);
-		setShowChoices(next.milestone);
-		setStreakScore(streakScore + 1);
-		playSound(jumpSound, isMuted, sfxEnabled);
-		if (next.milestone) {
-			const intervals = getMilestoneIntervals(mode);
-			const streakValue = streakScore + 1;
-			const milestoneIndex = intervals.findIndex(
-				(v) => v === streakValue
-			);
-			if (milestoneIndex !== -1) {
-				playMilestoneNarration(milestoneIndex);
-			}
-		}
-	}
-
-	function handleChoice(choice: string) {
-		if (choice === 'Embrace oblivion') {
-			let nextRound = round + 10;
-			let modeState;
-			switch (mode) {
-				case 'Classic':
-					modeState = getClassicModeState(nextRound, sides);
-					break;
-				case 'Endless':
-					modeState = getEndlessModeState(nextRound, sides);
-					break;
-				case 'Maniac':
-					modeState = getManiacModeState();
-					break;
-				case 'Peaceful':
-					modeState = getPeacefulModeState(sides);
-					break;
-				default:
-					modeState = getClassicModeState(nextRound, sides);
-			}
-			setSides(modeState.sides);
-			setSafeSides(modeState.safeSides);
-			setNarration(getMilestoneNarration(nextRound));
-			setMilestone(false);
-			setShowChoices(false);
-		} else if (choice === 'Question meaning') {
-			setCosmeticUnlocks([
-				...cosmeticUnlocks,
-				'Shadow Cat',
-			]);
-			setNarration(
-				'You stare into the void. The void stares back. You unlock a Shadow Cat.'
-			);
-			setMilestone(false);
-			setShowChoices(false);
-		} else {
-			setMilestone(false);
-			setShowChoices(false);
-		}
-		playSound(milestoneSound, isMuted, sfxEnabled);
-	}
+	const handleChoice = (choice: string) => {
+		handleChoiceManager({
+			choice,
+			mode,
+			shape,
+			sides,
+			safeSides,
+			round,
+			narration,
+			milestone,
+			cosmeticUnlocks,
+			streakScore,
+			highScore,
+			topScores,
+			isMuted,
+			sfxEnabled,
+			setSides,
+			setSafeSides,
+			setNarration,
+			setMilestone,
+			setCosmeticUnlocks,
+			setShowChoices,
+			playSound,
+		});
+	};
 
 	useEffect(() => {
 		if (milestone && narration) {
@@ -321,6 +218,188 @@ export default function GamePage() {
 		setHighScore(0);
 		setStreakScore(0);
 	};
+
+	const handleJump = (side: number) => {
+		handleJumpManager({
+			side,
+			safeSides,
+			mode,
+			shape,
+			sides,
+			round,
+			narration,
+			milestone,
+			cosmeticUnlocks,
+			streakScore,
+			highScore,
+			topScores,
+			isMuted,
+			sfxEnabled,
+			resetGame,
+			playFallNarration,
+			playMilestoneNarration,
+			setMode,
+			setShape,
+			setSides,
+			setSafeSides,
+			setNarration,
+			setMilestone,
+			setCosmeticUnlocks,
+			setShowChoices,
+			setStreakScore,
+			setHighScore,
+		});
+	};
+
+	// --- Supabase Realtime for Global Leaderboard ---
+	useEffect(() => {
+		let subscription: any;
+		async function subscribeToLeaderboard() {
+			console.log(
+				'[Leaderboard] Subscribing to Supabase leaderboard channel...'
+			);
+			subscription = supabase
+				.channel('public:leaderboard')
+				.on(
+					'postgres_changes',
+					{
+						event: '*',
+						schema: 'public',
+						table: 'leaderboard',
+					},
+					async () => {
+						try {
+							console.log(
+								'[Leaderboard] Detected change, fetching leaderboard...'
+							);
+							const scores = await fetchLeaderboard({
+								mode,
+							});
+							console.log(
+								'[Leaderboard] Fetched scores (realtime):',
+								scores
+							);
+							if (scores && Array.isArray(scores.data))
+								setTopScores(scores.data);
+							else if (scores?.error) {
+								console.error(
+									'Error fetching leaderboard (realtime):',
+									scores.error
+								);
+							}
+						} catch (err) {
+							console.error(
+								'Exception in realtime leaderboard fetch:',
+								err
+							);
+						}
+					}
+				)
+				.subscribe();
+		}
+		subscribeToLeaderboard();
+		return () => {
+			if (subscription) subscription.unsubscribe();
+		};
+	}, [mode, setTopScores]);
+
+	// --- High Score Modal Handlers ---
+	const handleHighScoreSubmit = async (name: string) => {
+		if (pendingScore == null || !pendingType) return;
+		if (pendingType === 'local' || pendingType === 'both') {
+			let updated =
+				Array.isArray(localScores) ? [...localScores] : [];
+			updated = [...updated, { name, score: pendingScore }]
+				.sort((a, b) => b.score - a.score)
+				.slice(0, 10);
+			setLocalScores(updated);
+			saveStat('bestStreaks', updated);
+		}
+		if (
+			pendingType === 'global' ||
+			pendingType === 'both'
+		) {
+			// Save to Supabase and update global leaderboard
+			await updateHighScoreEverywhere({
+				name,
+				score: pendingScore,
+				mode,
+			});
+			// Refetch leaderboard after submit
+			try {
+				console.log(
+					'[Leaderboard] Fetching leaderboard after submit...'
+				);
+				const scores = await fetchLeaderboard({ mode });
+				console.log(
+					'[Leaderboard] Fetched scores (submit):',
+					scores
+				);
+				if (scores && Array.isArray(scores.data))
+					setTopScores(scores.data);
+				else if (scores?.error) {
+					console.error(
+						'Error fetching leaderboard (submit):',
+						scores.error
+					);
+				}
+			} catch (err) {
+				console.error(
+					'Exception in leaderboard fetch after submit:',
+					err
+				);
+			}
+		}
+		setShowHighScoreModal(false);
+		setPendingScore(null);
+		setPendingType(null);
+		setLastMissedScore(null);
+	};
+
+	const handleHighScoreCancel = () => {
+		setShowHighScoreModal(false);
+		setPendingScore(null);
+		setPendingType(null);
+		setLastMissedScore(null);
+	};
+
+	// Debug: log before rendering PlatformShape
+	useEffect(() => {
+		console.log(
+			'About to render PlatformShape with sides:',
+			sides,
+			'mode:',
+			mode
+		);
+	}, [sides, mode]);
+
+	console.log(
+		'[Game] Rendering PlatformShape with props:',
+		{
+			sides,
+			mode,
+			platformSize: 1,
+			platformHeight: 0.8,
+		}
+	);
+	console.log(
+		'[Game] Current game state for PlatformShape:',
+		{
+			round,
+			shape,
+			safeSides,
+			streakScore,
+			highScore,
+			topScores,
+			isMuted,
+			sfxEnabled,
+			settingsOpen,
+			showChoices,
+			musicIndex,
+			isMusicPlaying,
+			isMusicMuted,
+		}
+	);
 
 	return (
 		<View
@@ -346,51 +425,89 @@ export default function GamePage() {
 			/>
 			<Text style={gameStyles.title}>Don't Jump</Text>
 			<View
-				style={{ alignItems: 'center', marginBottom: 16 }}
-				className='canvas-container'
+				style={{
+					flexDirection: 'row',
+					justifyContent: 'center',
+					marginBottom: 16,
+				}}
 			>
-				<Canvas
-					style={{
-						width: 180,
-						height: 180,
-						backgroundColor: 'transparent',
-						borderRadius: 16,
-					}}
-					camera={{
-						position: [0, 3, 7],
-						fov: 50,
-						near: 0.1,
-						far: 100,
-					}}
-					shadows={false}
-					frameloop='demand'
+				{/* Player: Stickman */}
+				<View
+					style={{ alignItems: 'center', marginLeft: 8 }}
+					className='canvas-container'
 				>
-					<ambientLight intensity={1.0} />
-					<directionalLight
-						position={[5, 10, 7]}
-						intensity={1.0}
-						castShadow={false}
-					/>
-					<StickFigure />
-				</Canvas>
-				<Canvas
-					style={{
-						width: 180,
-						height: 180,
-						backgroundColor: 'transparent',
-						borderRadius: 16,
-					}}
-					camera={{
-						position: [0, 3, 7],
-						fov: 50,
-						near: 0.1,
-						far: 100,
-					}}
-					shadows={false}
-					frameloop='demand'
+					<Canvas
+						style={{
+							width: 180,
+							height: 180,
+							backgroundColor: 'transparent',
+							borderRadius: 16,
+						}}
+						camera={{
+							position: [0, 0.7, 5],
+							fov: 50,
+							near: 0.1,
+							far: 100,
+						}}
+						shadows={false}
+						frameloop='always'
+					>
+						<color attach='background' args={['#111']} />
+						<ambientLight intensity={0.8} />
+						<directionalLight
+							position={[5, 10, 7]}
+							intensity={1.2}
+							castShadow={false}
+						/>
+						<pointLight
+							position={[0, 5, 5]}
+							intensity={0.5}
+						/>
+						{/* StickFigure at y=0.7, PlatformShape at y=0 */}
+						<StickFigure position={[0, 0.7, 0]} scale={1} />
+					</Canvas>
+				</View>
+				{/* Shapes: Platform */}
+				<View
+					style={{ alignItems: 'center', marginRight: 8 }}
+					className='canvas-container'
 				>
-					<PlatformShape sides={sides} />
-				</Canvas>
+					<Canvas
+						style={{
+							width: 180,
+							height: 180,
+							backgroundColor: 'transparent',
+							borderRadius: 16,
+						}}
+						camera={{
+							position: [0, 0, 5],
+							fov: 50,
+							near: 0.1,
+							far: 100,
+						}}
+						shadows={false}
+						frameloop='always'
+					>
+						<color attach='background' args={['#111']} />
+						<ambientLight intensity={0.8} />
+						<directionalLight
+							position={[5, 10, 7]}
+							intensity={1.2}
+							castShadow={false}
+						/>
+						<pointLight
+							position={[0, 5, 5]}
+							intensity={0.5}
+						/>
+						{/* <PlatformShape
+							sides={sides || 3}
+							mode={mode as any}
+							platformSize={1}
+							platformHeight={0.8}
+						/> */}
+					</Canvas>
+				</View>
+				{/*  */}
 			</View>
 			<ModeSelector
 				mode={mode}
@@ -398,8 +515,14 @@ export default function GamePage() {
 				resetGame={resetGame}
 				setShape={setShape}
 				setShowChoices={setShowChoices}
-				MODES={MODES}
-				getPlatformShape={getPlatformShape}
+				MODES={[...MODES]}
+				getPlatformShape={(sides: number) => {
+					const {
+						getPlatformShapeName,
+					} = require('../game/systems/platformManager');
+					return getPlatformShapeName(sides);
+				}}
+				setHighScore={setHighScore}
 			/>
 			<Text style={gameStyles.round}>Round: {round}</Text>
 			<Text style={gameStyles.shape}>
@@ -422,7 +545,20 @@ export default function GamePage() {
 				handleChoice={handleChoice}
 			/>
 			<CosmeticUnlocks cosmeticUnlocks={cosmeticUnlocks} />
-			<Scoreboard scores={GLOBAL_TOP_SCORES} />
+			<ScoreboardTabs
+				localScores={localScores}
+				globalScores={topScores}
+			/>
+			<HighScoreModal
+				visible={showHighScoreModal}
+				onSubmit={handleHighScoreSubmit}
+				onCancel={handleHighScoreCancel}
+				defaultName={''}
+				score={pendingScore}
+				isGlobal={
+					pendingType === 'global' || pendingType === 'both'
+				}
+			/>
 		</View>
 	);
 }
