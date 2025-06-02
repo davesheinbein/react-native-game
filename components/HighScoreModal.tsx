@@ -35,10 +35,20 @@ export function HighScoreModal({
 }: HighScoreModalProps) {
 	const [name, setName] = useState(defaultName);
 	const [inputFocused, setInputFocused] = useState(false);
+	const [submitting, setSubmitting] = useState(false); // Prevent double submit
 
 	React.useEffect(() => {
-		if (visible) setName(defaultName);
+		if (visible) {
+			setName(defaultName);
+			setSubmitting(false); // Reset submitting state when modal opens
+		}
 	}, [visible, defaultName]);
+
+	const handleSubmit = () => {
+		if (!name.trim() || submitting) return;
+		setSubmitting(true);
+		onSubmit(name.trim());
+	};
 
 	return (
 		<Modal
@@ -62,13 +72,10 @@ export function HighScoreModal({
 						style={styles.header}
 						accessibilityRole='header'
 					>
-						{isGlobal ?
-							'New Global High Score!'
-						:	'New High Score!'}
+						{isGlobal ? 'New Global High Score!' : 'New High Score!'}
 					</Text>
 					<Text style={styles.subtitle}>
-						Enter your name to record your score of {score}{' '}
-						in {mode} mode:
+						Enter your name to record your score of {score} in {mode} mode:
 					</Text>
 					<TextInput
 						style={[
@@ -85,17 +92,15 @@ export function HighScoreModal({
 						onBlur={() => setInputFocused(false)}
 						accessibilityLabel='Name input field'
 						accessibilityHint='Enter your name to record your score'
-						onSubmitEditing={() => {
-							if (name.trim()) onSubmit(name);
-						}}
+						onSubmitEditing={handleSubmit}
 					/>
 					<TouchableOpacity
 						style={[
 							styles.submitButton,
-							!name.trim() && styles.submitButtonDisabled,
+							(!name.trim() || submitting) && styles.submitButtonDisabled,
 						]}
-						onPress={() => name.trim() && onSubmit(name)}
-						disabled={!name.trim()}
+						onPress={handleSubmit}
+						disabled={!name.trim() || submitting}
 						accessibilityLabel='Submit high score entry'
 						accessibilityRole='button'
 					>
@@ -106,7 +111,7 @@ export function HighScoreModal({
 								justifyContent: 'center',
 							}}
 						>
-							{!name.trim() && (
+							{(!name.trim() || submitting) && (
 								<Ionicons
 									name='lock-closed'
 									size={18}
@@ -117,8 +122,7 @@ export function HighScoreModal({
 							<Text
 								style={[
 									styles.submitButtonText,
-									!name.trim() &&
-										styles.submitButtonTextDisabled,
+									(!name.trim() || submitting) && styles.submitButtonTextDisabled,
 								]}
 							>
 								Submit
@@ -132,9 +136,7 @@ export function HighScoreModal({
 						</Text>
 						<FlatList
 							data={localScores.slice(0, 10)}
-							keyExtractor={(item, idx) =>
-								item.name + item.score + idx
-							}
+							keyExtractor={(item, idx) => item.name + item.score + idx}
 							renderItem={({ item, index }) => (
 								<Text style={styles.scoreEntry}>
 									{index + 1}. {item.name} - {item.score}
@@ -148,13 +150,10 @@ export function HighScoreModal({
 								</Text>
 								<FlatList
 									data={globalScores.slice(0, 10)}
-									keyExtractor={(item, idx) =>
-										item.name + item.score + idx
-									}
+									keyExtractor={(item, idx) => item.name + item.score + idx}
 									renderItem={({ item, index }) => (
 										<Text style={styles.scoreEntry}>
-											{index + 1}. {item.name} -{' '}
-											{item.score}
+											{index + 1}. {item.name} - {item.score}
 										</Text>
 									)}
 								/>
@@ -215,7 +214,7 @@ const styles = StyleSheet.create({
 		fontSize: 22,
 		fontWeight: 'bold',
 		marginBottom: 10,
-		marginTop: 8,
+		marginTop: 28, // Increased from 8 for more spacing below close button
 		textAlign: 'center',
 	},
 	subtitle: {

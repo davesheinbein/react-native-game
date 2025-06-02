@@ -5,7 +5,8 @@
 import React, { useEffect, useState } from 'react';
 
 // Global (module-level) toggle for safe side visibility
-let _showSafeSides = false;
+// Default to false for initial visibility
+let _showSafeSides = true; // Changed to false for development and testing purposes temporaily change before sending out to production
 const safeSidesListeners: Array<(val: boolean) => void> =
 	[];
 

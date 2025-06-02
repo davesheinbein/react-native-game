@@ -1,6 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import {
+	Modal,
+	Pressable,
 	StyleSheet,
 	Text,
 	TouchableOpacity,
@@ -47,22 +49,37 @@ export function SettingsPanel({
 	musicTitle,
 	musicIndex,
 }: SettingsPanelProps) {
-	const [cheatModalOpen, setCheatModalOpen] = React.useState(false);
-	const [rulesModalOpen, setRulesModalOpen] = React.useState(false);
+	const [cheatModalOpen, setCheatModalOpen] =
+		React.useState(false);
+	const [rulesModalOpen, setRulesModalOpen] =
+		React.useState(false);
+	const [resetConfirmOpen, setResetConfirmOpen] =
+		React.useState(false); // NEW: state for reset confirmation
+
+	const handleResetPress = () => setResetConfirmOpen(true);
+	const handleResetConfirm = () => {
+		onResetHighScore();
+		setResetConfirmOpen(false);
+	};
+	const handleResetCancel = () =>
+		setResetConfirmOpen(false);
 
 	return (
 		<View style={styles.panelRoot}>
-			{!isOpen ? (
+			{!isOpen ?
 				<TouchableOpacity
 					onPress={onOpen}
 					accessibilityRole='button'
 					accessibilityLabel='Open settings'
 					style={styles.iconBtn}
 				>
-					<MaterialCommunityIcons name='cog-outline' size={32} color='#ffd600' />
+					<MaterialCommunityIcons
+						name='cog-outline'
+						size={32}
+						color='#ffd600'
+					/>
 				</TouchableOpacity>
-			) : (
-				<View style={styles.panelOpen}>
+			:	<View style={styles.panelOpen}>
 					{/* Close button */}
 					<TouchableOpacity
 						onPress={onClose}
@@ -70,7 +87,11 @@ export function SettingsPanel({
 						accessibilityLabel='Close settings'
 						style={styles.iconBtn}
 					>
-						<MaterialCommunityIcons name='close-circle-outline' size={32} color='#ffd600' />
+						<MaterialCommunityIcons
+							name='close-circle-outline'
+							size={32}
+							color='#ffd600'
+						/>
 					</TouchableOpacity>
 					{/* Rules icon button */}
 					<TouchableOpacity
@@ -79,17 +100,31 @@ export function SettingsPanel({
 						accessibilityLabel='Show game rules and how to play'
 						style={styles.iconBtn}
 					>
-						<MaterialCommunityIcons name='book-open-variant' size={26} color='#ffd600' />
+						<MaterialCommunityIcons
+							name='book-open-variant'
+							size={26}
+							color='#ffd600'
+						/>
 						<Text style={styles.cheatLabel}>Rules</Text>
 					</TouchableOpacity>
 					{/* Music play/pause */}
 					<TouchableOpacity
 						onPress={onToggleMusic}
 						accessibilityRole='button'
-						accessibilityLabel={isMusicPlaying ? 'Pause music' : 'Play music'}
+						accessibilityLabel={
+							isMusicPlaying ? 'Pause music' : 'Play music'
+						}
 						style={styles.iconBtn}
 					>
-						<MaterialCommunityIcons name={isMusicPlaying ? 'pause-circle-outline' : 'play-circle-outline'} size={28} color='#b2dfdb' />
+						<MaterialCommunityIcons
+							name={
+								isMusicPlaying ?
+									'pause-circle-outline'
+								:	'play-circle-outline'
+							}
+							size={28}
+							color='#b2dfdb'
+						/>
 					</TouchableOpacity>
 					{/* Next track */}
 					<TouchableOpacity
@@ -98,35 +133,101 @@ export function SettingsPanel({
 						accessibilityLabel='Change music track'
 						style={styles.iconBtn}
 					>
-						<Text style={styles.musicTitle}>{musicTitle} (tap to change)</Text>
+						<Text style={styles.musicTitle}>
+							{musicTitle} (tap to change)
+						</Text>
 					</TouchableOpacity>
 					{/* Mute toggle */}
 					<TouchableOpacity
 						onPress={onToggleMute}
 						accessibilityRole='button'
-						accessibilityLabel={isMuted ? 'Unmute all' : 'Mute all'}
+						accessibilityLabel={
+							isMuted ? 'Unmute all' : 'Mute all'
+						}
 						style={styles.iconBtn}
 					>
-						<MaterialCommunityIcons name={isMuted ? 'volume-off' : 'volume-high'} size={28} color='#ffd600' />
+						<MaterialCommunityIcons
+							name={isMuted ? 'volume-off' : 'volume-high'}
+							size={28}
+							color='#ffd600'
+						/>
 					</TouchableOpacity>
 					{/* SFX toggle */}
 					<TouchableOpacity
 						onPress={onToggleSfx}
 						accessibilityRole='button'
-						accessibilityLabel={sfxEnabled ? 'Disable SFX' : 'Enable SFX'}
+						accessibilityLabel={
+							sfxEnabled ? 'Disable SFX' : 'Enable SFX'
+						}
 						style={styles.iconBtn}
 					>
-						<MaterialCommunityIcons name={sfxEnabled ? 'bell-ring-outline' : 'bell-off-outline'} size={26} color='#ffd600' />
+						<MaterialCommunityIcons
+							name={
+								sfxEnabled ?
+									'bell-ring-outline'
+								:	'bell-off-outline'
+							}
+							size={26}
+							color='#ffd600'
+						/>
 					</TouchableOpacity>
-					{/* Reset high score */}
+					{/* Reset high score with confirmation modal */}
 					<TouchableOpacity
-						onPress={onResetHighScore}
+						onPress={handleResetPress}
 						accessibilityRole='button'
 						accessibilityLabel='Reset High Score'
 						style={styles.iconBtn}
 					>
-						<MaterialCommunityIcons name='restore' size={26} color='#ffd600' />
+						<MaterialCommunityIcons
+							name='restore'
+							size={26}
+							color='#ffd600'
+						/>
 					</TouchableOpacity>
+					<Modal
+						visible={resetConfirmOpen}
+						animationType='fade'
+						transparent
+						onRequestClose={handleResetCancel}
+					>
+						<View style={styles.modalOverlay}>
+							<View style={styles.confirmModal}>
+								<Text style={styles.confirmTitle}>
+									Reset High Score?
+								</Text>
+								<Text style={styles.confirmText}>
+									Are you sure you want to reset all local
+									high scores? This cannot be undone.
+								</Text>
+								<View style={styles.confirmActions}>
+									<Pressable
+										style={styles.confirmBtn}
+										onPress={handleResetCancel}
+									>
+										<Text style={styles.confirmBtnText}>
+											Cancel
+										</Text>
+									</Pressable>
+									<Pressable
+										style={[
+											styles.confirmBtn,
+											styles.confirmBtnDanger,
+										]}
+										onPress={handleResetConfirm}
+									>
+										<Text
+											style={[
+												styles.confirmBtnText,
+												styles.confirmBtnDangerText,
+											]}
+										>
+											Reset
+										</Text>
+									</Pressable>
+								</View>
+							</View>
+						</View>
+					</Modal>
 					{/* Cheatcodes button with tooltip */}
 					<TouchableOpacity
 						onPress={() => setCheatModalOpen(true)}
@@ -134,13 +235,25 @@ export function SettingsPanel({
 						accessibilityLabel='Open cheatcodes menu'
 						style={styles.iconBtn}
 					>
-						<MaterialCommunityIcons name='code-braces' size={26} color='#ffd600' />
-						<Text style={styles.cheatLabel}>Cheatcodes</Text>
+						<MaterialCommunityIcons
+							name='code-braces'
+							size={26}
+							color='#ffd600'
+						/>
+						<Text style={styles.cheatLabel}>
+							Cheatcodes
+						</Text>
 					</TouchableOpacity>
 				</View>
-			)}
-			<CheatcodesModal visible={cheatModalOpen} onClose={() => setCheatModalOpen(false)} />
-			<GameRulesModal visible={rulesModalOpen} onClose={() => setRulesModalOpen(false)} />
+			}
+			<CheatcodesModal
+				visible={cheatModalOpen}
+				onClose={() => setCheatModalOpen(false)}
+			/>
+			<GameRulesModal
+				visible={rulesModalOpen}
+				onClose={() => setRulesModalOpen(false)}
+			/>
 		</View>
 	);
 }
@@ -183,5 +296,56 @@ const styles = StyleSheet.create({
 		color: '#ffd600',
 		fontSize: 14,
 		marginTop: 2,
+	},
+	modalOverlay: {
+		flex: 1,
+		backgroundColor: 'rgba(0,0,0,0.45)',
+		alignItems: 'center',
+		justifyContent: 'center',
+		zIndex: 100,
+	},
+	confirmModal: {
+		backgroundColor: '#222',
+		borderRadius: 18,
+		padding: 24,
+		alignItems: 'center',
+		maxWidth: 320,
+		shadowColor: '#000',
+		shadowOpacity: 0.18,
+		shadowRadius: 8,
+		elevation: 8,
+	},
+	confirmTitle: {
+		color: '#ffd600',
+		fontSize: 20,
+		fontWeight: 'bold',
+		marginBottom: 8,
+	},
+	confirmText: {
+		color: '#fff',
+		fontSize: 15,
+		marginBottom: 18,
+		textAlign: 'center',
+	},
+	confirmActions: {
+		flexDirection: 'row',
+		gap: 18,
+	},
+	confirmBtn: {
+		paddingVertical: 8,
+		paddingHorizontal: 18,
+		borderRadius: 8,
+		backgroundColor: '#333',
+	},
+	confirmBtnText: {
+		color: '#ffd600',
+		fontSize: 16,
+		fontWeight: 'bold',
+	},
+	confirmBtnDanger: {
+		backgroundColor: '#ffd600',
+	},
+	confirmBtnDangerText: {
+		color: '#222',
 	},
 });

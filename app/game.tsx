@@ -8,6 +8,7 @@ import { CosmeticUnlocks } from '../components/CosmeticUnlocks';
 import { ExistentialChoices } from '../components/ExistentialChoices';
 import { HighScoreModal } from '../components/HighScoreModal';
 import { JumpButtons } from '../components/JumpButtons';
+import { JumpIndicator3D } from '../components/JumpIndicator';
 import { ModeSelector } from '../components/ModeSelector';
 import { Platform } from '../components/Platform';
 import { SettingsPanel } from '../components/SettingsPanel';
@@ -290,6 +291,17 @@ export default function Game() {
 	const handleResetHighScore = () => {
 		setHighScore(0);
 		setStreakScore(0);
+		// Clear all local high scores for all modes
+		setLocalScoresByMode((prev) => {
+			const cleared: Record<string, ScoreEntry[]> = {};
+			for (const m of MODES) {
+				cleared[m] = [];
+				saveStat(`bestStreaks_${m}`, []);
+			}
+			return cleared;
+		});
+		setLocalScores([]);
+		saveStat('bestStreaks', []);
 	};
 
 	const handleJump = (side: number) => {
@@ -431,6 +443,10 @@ export default function Game() {
 		React.useState(false);
 	useCheatModalShortcut(setCheatModalOpen);
 
+	const [hoveredSide, setHoveredSide] = React.useState<
+		number | null
+	>(null);
+
 	return (
 		<>
 			<View
@@ -460,6 +476,7 @@ export default function Game() {
 						flexDirection: 'row',
 						justifyContent: 'center',
 						marginBottom: 16,
+						position: 'relative',
 					}}
 				>
 					<View
@@ -468,13 +485,13 @@ export default function Game() {
 					>
 						<Canvas
 							style={{
-								width: 250,
-								height: 250,
+								width: 300,
+								height: 300,
 								backgroundColor: 'transparent',
 								borderRadius: 16,
 							}}
 							camera={{
-								position: [0, 0.7, 5],
+								position: [0, 1.2, 7],
 								fov: 50,
 								near: 0.1,
 								far: 100,
@@ -507,6 +524,14 @@ export default function Game() {
 									platformSize={1}
 									platformHeight={platformHeight}
 									onRotationChange={setPlatformRotation}
+								/>
+								<JumpIndicator3D
+									sides={sides}
+									safeSides={safeSides}
+									hoveredSide={hoveredSide}
+									platformRotation={platformRotation} // Pass the actual rotation
+									platformSize={1}
+									platformHeight={platformHeight}
 								/>
 							</group>
 						</Canvas>
@@ -544,6 +569,7 @@ export default function Game() {
 					safeSides={safeSides}
 					mode={mode}
 					handleJump={handleJump}
+					onHover={setHoveredSide}
 				/>
 				<ExistentialChoices
 					showChoices={showChoices}
