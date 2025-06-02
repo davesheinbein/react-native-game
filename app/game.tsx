@@ -7,6 +7,7 @@ import { ExistentialChoices } from '../components/ExistentialChoices';
 import { HighScoreModal } from '../components/HighScoreModal';
 import { JumpButtons } from '../components/JumpButtons';
 import { ModeSelector } from '../components/ModeSelector';
+import { Platform } from '../components/Platform';
 import { ScoreboardTabs } from '../components/ScoreboardTabs';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { MODES } from '../constants/config';
@@ -467,6 +468,7 @@ export default function Game() {
 						<StickFigure position={[0, 0.7, 0]} scale={1} />
 					</Canvas>
 				</View>
+
 				{/* Shapes: Platform */}
 				<View
 					style={{ alignItems: 'center', marginRight: 8 }}
@@ -499,12 +501,12 @@ export default function Game() {
 							position={[0, 5, 5]}
 							intensity={0.5}
 						/>
-						{/* <PlatformShape
+						<Platform
 							sides={sides || 3}
 							mode={mode as any}
 							platformSize={1}
 							platformHeight={0.8}
-						/> */}
+						/>
 					</Canvas>
 				</View>
 				{/*  */}
