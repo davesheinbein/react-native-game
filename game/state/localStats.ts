@@ -1,5 +1,5 @@
 import { MMKV } from 'react-native-mmkv';
-import { maybeSubmitHighScore } from './supabaseLeaderboard';
+import { maybeSubmitHighScore } from './firebaseConfigLeaderboard';
 
 const storage = new MMKV();
 

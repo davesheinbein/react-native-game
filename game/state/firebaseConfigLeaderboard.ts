@@ -1,6 +1,15 @@
-import { supabase } from '../../utils/supabase';
+import {
+	addDoc,
+	collection,
+	limit as fbLimit,
+	getDocs,
+	orderBy,
+	query,
+	where,
+} from 'firebase/firestore';
+import { db } from '../../utils/firebaseConfig'; // Use the updated Firebase config
 
-// --- Leaderboard API ---
+// --- Leaderboard API (Firebase) ---
 
 /**
  * Submit a score to the leaderboard table.
@@ -21,9 +30,16 @@ export async function submitScore({
 	mode: string;
 	region?: string;
 }) {
-	return supabase
-		.from('leaderboard')
-		.insert([{ name, score, mode, region }]);
+	const data: any = {
+		name,
+		score,
+		mode,
+		created_at: new Date(),
+	};
+	if (region !== undefined) {
+		data.region = region;
+	}
+	return addDoc(collection(db, 'leaderboard'), data);
 }
 
 /**
@@ -42,12 +58,16 @@ export async function fetchLeaderboard({
 	region?: string;
 	limit?: number;
 } = {}) {
-	let query = supabase.from('leaderboard').select('*');
-	if (mode) query = query.eq('mode', mode);
-	if (region) query = query.eq('region', region);
-	return query
-		.order('score', { ascending: false })
-		.limit(limit);
+	let q = query(
+		collection(db, 'leaderboard'),
+		orderBy('score', 'desc'),
+		fbLimit(limit)
+	);
+	if (mode) q = query(q, where('mode', '==', mode));
+	if (region) q = query(q, where('region', '==', region));
+	const snapshot = await getDocs(q);
+	const data = snapshot.docs.map((doc) => doc.data());
+	return { data };
 }
 
 /**
@@ -70,13 +90,11 @@ export async function maybeSubmitHighScore({
 	mode: string;
 	region?: string;
 }): Promise<boolean> {
-	const { data: topScores, error } = await fetchLeaderboard(
-		{ mode, region, limit: 10 }
-	);
-	if (error) {
-		console.error('Error fetching leaderboard:', error);
-		return false;
-	}
+	const { data: topScores } = await fetchLeaderboard({
+		mode,
+		region,
+		limit: 10,
+	});
 	if (
 		!topScores ||
 		topScores.length < 10 ||
@@ -89,14 +107,13 @@ export async function maybeSubmitHighScore({
 }
 
 /**
- * Example table schema for Supabase (Postgres):
+ * Example table schema for Firestore:
  *
- *   CREATE TABLE leaderboard (
- *     id serial PRIMARY KEY,
- *     name text NOT NULL,
- *     score integer NOT NULL,
- *     mode text NOT NULL,
- *     region text,
- *     created_at timestamp with time zone DEFAULT timezone('utc', now())
- *   );
+ *   leaderboard (collection)
+ *     └── leaderboard (document)
+ *         ├── name: string
+ *         ├── score: number
+ *         ├── mode: string
+ *         ├── region: string (optional)
+ *         └── created_at: timestamp
  */

@@ -16,9 +16,7 @@ export function JumpButtons({
 						title={`Jump Side ${i + 1}`}
 						onPress={() => handleJump(i)}
 						color={
-							safeSides.includes(i) && mode !== 'Maniac' ?
-								'#4caf50'
-							:	'#222'
+							safeSides.includes(i) ? '#4caf50' : '#222'
 						}
 					/>
 				</View>

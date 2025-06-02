@@ -28,36 +28,66 @@ export function HighScoreModal({
 	isGlobal,
 }: HighScoreModalProps) {
 	const [name, setName] = useState(defaultName);
+	const [modalVisible, setModalVisible] = useState(visible);
+	const [animStyle, setAnimStyle] = useState({
+		opacity: 0,
+		transform: [{ scale: 0.95 }],
+	});
+	const [inputFocused, setInputFocused] = useState(false);
 
 	React.useEffect(() => {
-		if (visible) setName(defaultName);
+		if (visible) {
+			setModalVisible(true);
+			setTimeout(() => {
+				setAnimStyle({
+					opacity: 1,
+					transform: [{ scale: 1 }],
+				});
+			}, 10);
+			setName(defaultName);
+		} else {
+			setAnimStyle({
+				opacity: 0,
+				transform: [{ scale: 0.95 }],
+			});
+			setTimeout(() => setModalVisible(false), 200);
+		}
 	}, [visible, defaultName]);
 
 	return (
 		<Modal
-			visible={visible}
+			visible={modalVisible}
 			transparent
-			animationType='fade'
+			animationType='none'
 			onRequestClose={onCancel}
+			accessibilityViewIsModal
 		>
 			<Pressable
 				style={modalStyles.overlay}
 				onPress={onCancel}
+				accessibilityLabel='Close high score modal overlay'
+				accessibilityRole='button'
 			>
 				<Pressable
-					style={modalStyles.centeredModal}
+					style={[modalStyles.centeredModal, animStyle]}
 					onPress={(e) => e.stopPropagation()}
+					accessible
+					accessibilityLabel='High score entry dialog'
 				>
 					<TouchableOpacity
 						style={modalStyles.closeButton}
 						onPress={onCancel}
 						accessibilityLabel='Close high score modal'
+						accessibilityRole='button'
 					>
 						<Text style={modalStyles.closeButtonText}>
 							×
 						</Text>
 					</TouchableOpacity>
-					<Text style={modalStyles.title}>
+					<Text
+						style={modalStyles.title}
+						accessibilityRole='header'
+					>
 						{isGlobal ?
 							'New Global High Score!'
 						:	'New High Score!'}
@@ -66,18 +96,38 @@ export function HighScoreModal({
 						Enter your name to record your score of {score}:
 					</Text>
 					<TextInput
-						style={modalStyles.input}
+						style={[
+							modalStyles.input,
+							inputFocused && modalStyles.inputFocused,
+						]}
 						value={name}
 						onChangeText={setName}
 						placeholder='Your Name'
 						maxLength={16}
 						autoFocus
+						returnKeyType='done'
+						onFocus={() => setInputFocused(true)}
+						onBlur={() => setInputFocused(false)}
+						accessibilityLabel='Name input field'
+						accessibilityHint='Enter your name to record your score'
+						onSubmitEditing={() => {
+							if (name.trim()) onSubmit(name);
+						}}
 					/>
 					<View style={modalStyles.buttonRow}>
+						<Button
+							title='Cancel'
+							onPress={onCancel}
+							color='#888'
+							accessibilityLabel='Cancel high score entry'
+						/>
+						<View style={{ width: 16 }} />
 						<Button
 							title='Submit'
 							onPress={() => onSubmit(name)}
 							disabled={!name.trim()}
+							color='#ffd600'
+							accessibilityLabel='Submit high score entry'
 						/>
 					</View>
 				</Pressable>
@@ -148,10 +198,17 @@ const modalStyles = StyleSheet.create({
 		marginBottom: 18,
 		textAlign: 'center' as const,
 	},
+	inputFocused: {
+		borderColor: '#fff',
+		shadowColor: '#ffd600',
+		shadowOpacity: 0.5,
+		shadowRadius: 6,
+	},
 	buttonRow: {
 		flexDirection: 'row' as const,
 		justifyContent: 'center' as const,
 		width: '100%',
 		marginTop: 8,
+		gap: 0,
 	},
 });

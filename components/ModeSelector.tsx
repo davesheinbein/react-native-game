@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { gameStyles } from '../constants/gameStyles';
 
 export function ModeSelector({
@@ -22,20 +22,45 @@ export function ModeSelector({
 	setHighScore: (score: number) => void;
 }) {
 	return (
-		<View style={gameStyles.modeRow}>
-			{MODES.map((m: string) => (
-				<Button
+		<View
+			style={[
+				gameStyles.modeRow,
+				{
+					flexDirection: 'row',
+					justifyContent: 'center',
+					marginBottom: 10,
+				},
+			]}
+		>
+			{MODES.map((m, idx) => (
+				<TouchableOpacity
 					key={m}
-					title={m}
-					color={mode === m ? '#4caf50' : '#333'}
 					onPress={() => {
 						setMode(m);
 						resetGame();
-						setHighScore(0); // Reset high score when swapping modes
+						setHighScore(0);
 						setShape(getPlatformShape(3));
 						setShowChoices(false);
 					}}
-				/>
+					style={{
+						backgroundColor:
+							mode === m ? '#4caf50' : '#333',
+						borderRadius: 12,
+						paddingVertical: 8,
+						paddingHorizontal: 18,
+						marginRight: idx !== MODES.length - 1 ? 8 : 0,
+					}}
+				>
+					<Text
+						style={{
+							color: '#fff',
+							fontWeight: 'bold',
+							fontSize: 16,
+						}}
+					>
+						{m}
+					</Text>
+				</TouchableOpacity>
 			))}
 		</View>
 	);

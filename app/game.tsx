@@ -1,3 +1,4 @@
+import { ScoreboardTabs } from '@/components/ScoreboardTabs';
 import { StickFigure } from '@/components/StickFigure';
 import { Canvas } from '@react-three/fiber';
 import React, { useEffect, useRef } from 'react';
@@ -8,18 +9,17 @@ import { HighScoreModal } from '../components/HighScoreModal';
 import { JumpButtons } from '../components/JumpButtons';
 import { ModeSelector } from '../components/ModeSelector';
 import { Platform } from '../components/Platform';
-import { ScoreboardTabs } from '../components/ScoreboardTabs';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { MODES } from '../constants/config';
 import { gameStyles } from '../constants/gameStyles';
 import { existentialChoices } from '../constants/texts';
 import { soundtrackTitles } from '../game/audio/music';
+import { fetchLeaderboard } from '../game/state/firebaseConfigLeaderboard';
 import {
 	getStat,
 	saveStat,
 	updateHighScoreEverywhere,
 } from '../game/state/localStats';
-import { fetchLeaderboard } from '../game/state/supabaseLeaderboard';
 import { useGameStore } from '../game/state/useGameStore';
 import {
 	getMilestoneIntervals,
@@ -36,7 +36,6 @@ import {
 	playFallNarration,
 	playMilestoneNarration,
 } from '../hooks/useNarrationPlayer';
-import { supabase } from '../utils/supabase';
 
 type Mode = (typeof MODES)[number];
 
@@ -93,6 +92,57 @@ export default function Game() {
 		);
 		return Array.isArray(val) ? val : [];
 	});
+
+	// --- Multi-mode leaderboard state ---
+	type ScoreEntry = { name: string; score: number };
+	const [localScoresByMode, setLocalScoresByMode] =
+		React.useState<Record<string, ScoreEntry[]>>(() => {
+			const obj: Record<string, ScoreEntry[]> = {};
+			for (const m of MODES) {
+				obj[m] =
+					getStat<ScoreEntry[]>(`bestStreaks_${m}`, []) ||
+					[];
+			}
+			return obj;
+		});
+	const [globalScoresByMode, setGlobalScoresByMode] =
+		React.useState<Record<string, ScoreEntry[]>>(() => {
+			const obj: Record<string, ScoreEntry[]> = {};
+			for (const m of MODES) {
+				obj[m] = [];
+			}
+			return obj;
+		});
+
+	// Fetch global leaderboards for all modes on mount
+	React.useEffect(() => {
+		(async () => {
+			for (const m of MODES) {
+				try {
+					const scores = await fetchLeaderboard({
+						mode: m,
+					});
+					setGlobalScoresByMode(
+						(prev: Record<string, ScoreEntry[]>) => ({
+							...prev,
+							[m]: (scores?.data || []).map(
+								(entry: any) => ({
+									name: entry.name,
+									score: entry.score,
+								})
+							),
+						})
+					);
+				} catch (err) {
+					console.error(
+						'Error fetching global leaderboard for',
+						m,
+						err
+					);
+				}
+			}
+		})();
+	}, []);
 
 	// --- High Score Modal State ---
 	const [showHighScoreModal, setShowHighScoreModal] =
@@ -252,98 +302,48 @@ export default function Game() {
 		});
 	};
 
-	// --- Supabase Realtime for Global Leaderboard ---
-	useEffect(() => {
-		let subscription: any;
-		async function subscribeToLeaderboard() {
-			console.log(
-				'[Leaderboard] Subscribing to Supabase leaderboard channel...'
-			);
-			subscription = supabase
-				.channel('public:leaderboard')
-				.on(
-					'postgres_changes',
-					{
-						event: '*',
-						schema: 'public',
-						table: 'leaderboard',
-					},
-					async () => {
-						try {
-							console.log(
-								'[Leaderboard] Detected change, fetching leaderboard...'
-							);
-							const scores = await fetchLeaderboard({
-								mode,
-							});
-							console.log(
-								'[Leaderboard] Fetched scores (realtime):',
-								scores
-							);
-							if (scores && Array.isArray(scores.data))
-								setTopScores(scores.data);
-							else if (scores?.error) {
-								console.error(
-									'Error fetching leaderboard (realtime):',
-									scores.error
-								);
-							}
-						} catch (err) {
-							console.error(
-								'Exception in realtime leaderboard fetch:',
-								err
-							);
-						}
-					}
-				)
-				.subscribe();
-		}
-		subscribeToLeaderboard();
-		return () => {
-			if (subscription) subscription.unsubscribe();
-		};
-	}, [mode, setTopScores]);
-
 	// --- High Score Modal Handlers ---
 	const handleHighScoreSubmit = async (name: string) => {
 		if (pendingScore == null || !pendingType) return;
+		const modeKey = mode;
 		if (pendingType === 'local' || pendingType === 'both') {
 			let updated =
-				Array.isArray(localScores) ? [...localScores] : [];
+				Array.isArray(localScoresByMode[modeKey]) ?
+					[...localScoresByMode[modeKey]]
+				:	[];
 			updated = [...updated, { name, score: pendingScore }]
 				.sort((a, b) => b.score - a.score)
 				.slice(0, 10);
-			setLocalScores(updated);
-			saveStat('bestStreaks', updated);
+			setLocalScoresByMode(
+				(prev: Record<string, ScoreEntry[]>) => ({
+					...prev,
+					[modeKey]: updated,
+				})
+			);
+			saveStat(`bestStreaks_${modeKey}`, updated);
 		}
 		if (
 			pendingType === 'global' ||
 			pendingType === 'both'
 		) {
-			// Save to Supabase and update global leaderboard
 			await updateHighScoreEverywhere({
 				name,
 				score: pendingScore,
 				mode,
 			});
-			// Refetch leaderboard after submit
 			try {
-				console.log(
-					'[Leaderboard] Fetching leaderboard after submit...'
-				);
 				const scores = await fetchLeaderboard({ mode });
-				console.log(
-					'[Leaderboard] Fetched scores (submit):',
-					scores
+				setGlobalScoresByMode(
+					(prev: Record<string, ScoreEntry[]>) => ({
+						...prev,
+						[modeKey]: (scores?.data || []).map(
+							(entry: any) => ({
+								name: entry.name,
+								score: entry.score,
+							})
+						),
+					})
 				);
-				if (scores && Array.isArray(scores.data))
-					setTopScores(scores.data);
-				else if (scores?.error) {
-					console.error(
-						'Error fetching leaderboard (submit):',
-						scores.error
-					);
-				}
 			} catch (err) {
 				console.error(
 					'Exception in leaderboard fetch after submit:',
@@ -425,7 +425,6 @@ export default function Game() {
 				onToggleMusic={() =>
 					setIsMusicPlaying(!isMusicPlaying)
 				}
-				onNextTrack={nextTrack}
 				isMuted={isMuted}
 				onToggleMute={() => setMuted(!isMuted)}
 				sfxEnabled={sfxEnabled}
@@ -493,6 +492,7 @@ export default function Game() {
 				</View>
 				{/*  */}
 			</View>
+			{/* ModeSelector controls both game and scoreboard mode */}
 			<ModeSelector
 				mode={mode}
 				setMode={setMode}
@@ -528,11 +528,13 @@ export default function Game() {
 				existentialChoices={existentialChoices}
 				handleChoice={handleChoice}
 			/>
-			<CosmeticUnlocks cosmeticUnlocks={cosmeticUnlocks} />
 			<ScoreboardTabs
-				localScores={localScores}
-				globalScores={topScores}
+				mode={mode}
+				setMode={setMode}
+				localScoresByMode={localScoresByMode}
+				globalScoresByMode={globalScoresByMode}
 			/>
+			<CosmeticUnlocks cosmeticUnlocks={cosmeticUnlocks} />
 			<HighScoreModal
 				visible={showHighScoreModal}
 				onSubmit={handleHighScoreSubmit}
