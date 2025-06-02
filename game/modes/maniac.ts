@@ -19,7 +19,7 @@ export function getManiacModeState(
 	// --- 1. Randomize sides per round based on difficulty scaling ---
 	const [minSides, maxSides] =
 		MANIAC_MODE_CONFIG.SIDE_RANGE(round);
-	const sides =
+	let sides =
 		Math.floor(Math.random() * (maxSides - minSides + 1)) +
 		minSides;
 
@@ -66,10 +66,22 @@ export function getManiacModeState(
 		}
 	}
 
+	// --- Disc shape for extreme mode ---
+	let shape: string;
+	if (sides === 3) shape = 'Tetrahedron';
+	else if (sides === 4) shape = 'Cube';
+	else if (sides === 6) shape = 'Hexagonal Prism';
+	else if (sides === 8) shape = 'Octagonal Prism';
+	else if (sides > 8) {
+		shape = 'Disc';
+		sides = 12; // Use 12 for disc/cylinder
+	} else shape = `${sides}-gon Prism`;
+
 	// --- 4. Return state (expandable for narration, etc) ---
 	return {
 		sides,
 		safeSides,
+		shape,
 		events, // Array of power/penalty events this round
 	};
 }

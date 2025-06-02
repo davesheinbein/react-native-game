@@ -3,6 +3,7 @@ import { StickFigure } from '@/components/StickFigure';
 import { Canvas } from '@react-three/fiber';
 import React, { useEffect, useRef } from 'react';
 import { Text, View } from 'react-native';
+import { CheatcodesModal } from '../components/CheatcodesModal';
 import { CosmeticUnlocks } from '../components/CosmeticUnlocks';
 import { ExistentialChoices } from '../components/ExistentialChoices';
 import { HighScoreModal } from '../components/HighScoreModal';
@@ -36,6 +37,27 @@ import {
 	playFallNarration,
 	playMilestoneNarration,
 } from '../hooks/useNarrationPlayer';
+
+// Custom hook for keyboard shortcut (Ctrl+S) to open cheat modal
+function useCheatModalShortcut(
+	setCheatModalOpen: (v: boolean) => void
+) {
+	const openRef = React.useRef(false);
+	React.useEffect(() => {
+		function onKeyDown(e: KeyboardEvent) {
+			if (e.ctrlKey && e.key === 's') {
+				e.preventDefault();
+				openRef.current = !openRef.current;
+				setCheatModalOpen(openRef.current);
+			}
+		}
+		if (typeof window !== 'undefined') {
+			window.addEventListener('keydown', onKeyDown);
+			return () =>
+				window.removeEventListener('keydown', onKeyDown);
+		}
+	}, [setCheatModalOpen]);
+}
 
 type Mode = (typeof MODES)[number];
 
@@ -374,177 +396,189 @@ export default function Game() {
 		);
 	}, [sides, mode]);
 
-	console.log(
-		'[Game] Rendering PlatformShape with props:',
-		{
-			sides,
-			mode,
-			platformSize: 1,
-			platformHeight: 0.8,
-		}
-	);
-	console.log(
-		'[Game] Current game state for PlatformShape:',
-		{
-			round,
-			shape,
-			safeSides,
-			streakScore,
-			highScore,
-			topScores,
-			isMuted,
-			sfxEnabled,
-			settingsOpen,
-			showChoices,
-			musicIndex,
-			isMusicPlaying,
-			isMusicMuted,
-		}
-	);
-
 	const [platformRotation, setPlatformRotation] =
 		React.useState(0);
 	const platformRef = React.useRef<any>(null);
 	const stickFigureRef = React.useRef<any>(null);
 	const platformHeight = 0.8;
-	// const stickFigureBaseY = -0.45; // lowest y of stickman mesh
-	const stickFigureBaseY = 1; // lowest y of stickman mesh
+
+	// Calculate stick figure Y so it always stands on the platform
+	const getStickFigureBaseY = (
+		sides: number,
+		platformHeight: number
+	) => {
+		// For prism/cylinder, base is at -platformHeight/2
+		// For cube, same as prism
+		// For triangular prism, same as prism
+		// For tetrahedron, base is at -Math.sqrt(6)/3 * radius (radius ~ 1.2)
+		if (sides === 3) {
+			// Tetrahedron or triangular prism: use prism logic for now
+			return -platformHeight / 2;
+		} else if (sides === 4) {
+			return -platformHeight / 2;
+		} else {
+			return -platformHeight / 2;
+		}
+	};
+	const stickFigureBaseY = getStickFigureBaseY(
+		sides,
+		platformHeight
+	);
 	const stickFigureY =
 		platformHeight / 2 + Math.abs(stickFigureBaseY) + 0.05; // 0.05 = small gap
 
+	const [cheatModalOpen, setCheatModalOpen] =
+		React.useState(false);
+	useCheatModalShortcut(setCheatModalOpen);
+
 	return (
-		<View
-			style={gameStyles.container}
-			className='main-container'
-		>
-			<SettingsPanel
-				isOpen={settingsOpen}
-				onOpen={() => setSettingsOpen(true)}
-				onClose={() => setSettingsOpen(false)}
-				isMusicPlaying={isMusicPlaying}
-				onToggleMusic={() =>
-					setIsMusicPlaying(!isMusicPlaying)
-				}
-				isMuted={isMuted}
-				onToggleMute={() => setMuted(!isMuted)}
-				sfxEnabled={sfxEnabled}
-				onToggleSfx={() => setSfxEnabled(!sfxEnabled)}
-				onResetHighScore={handleResetHighScore}
-				musicTitle={soundtrackTitles[musicIndex]}
-				musicIndex={musicIndex}
-			/>
-			<Text style={gameStyles.title}>Don't Miss</Text>
+		<>
 			<View
-				style={{
-					flexDirection: 'row',
-					justifyContent: 'center',
-					marginBottom: 16,
-				}}
+				style={gameStyles.container}
+				className='main-container'
 			>
+				<SettingsPanel
+					isOpen={settingsOpen}
+					onOpen={() => setSettingsOpen(true)}
+					onClose={() => setSettingsOpen(false)}
+					isMusicPlaying={isMusicPlaying}
+					onToggleMusic={() =>
+						setIsMusicPlaying(!isMusicPlaying)
+					}
+					onNextTrack={nextTrack}
+					isMuted={isMuted}
+					onToggleMute={() => setMuted(!isMuted)}
+					sfxEnabled={sfxEnabled}
+					onToggleSfx={() => setSfxEnabled(!sfxEnabled)}
+					onResetHighScore={handleResetHighScore}
+					musicTitle={soundtrackTitles[musicIndex]}
+					musicIndex={musicIndex}
+				/>
+				<Text style={gameStyles.title}>Don't Miss</Text>
 				<View
-					style={{ alignItems: 'center' }}
-					className='canvas-container'
+					style={{
+						flexDirection: 'row',
+						justifyContent: 'center',
+						marginBottom: 16,
+					}}
 				>
-					<Canvas
-						style={{
-							width: 250,
-							height: 250,
-							backgroundColor: 'transparent',
-							borderRadius: 16,
-						}}
-						camera={{
-							position: [0, 0.7, 5],
-							fov: 50,
-							near: 0.1,
-							far: 100,
-						}}
-						shadows={false}
-						frameloop='always'
+					<View
+						style={{ alignItems: 'center' }}
+						className='canvas-container'
 					>
-						<color attach='background' args={['#111']} />
-						<ambientLight intensity={0.8} />
-						<directionalLight
-							position={[5, 10, 7]}
-							intensity={1.2}
-							castShadow={false}
-						/>
-						<pointLight
-							position={[0, 5, 5]}
-							intensity={0.5}
-						/>
-						<group
-							position={[0, -1, 0]}
-							rotation={[0, platformRotation, 0]}
+						<Canvas
+							style={{
+								width: 250,
+								height: 250,
+								backgroundColor: 'transparent',
+								borderRadius: 16,
+							}}
+							camera={{
+								position: [0, 0.7, 5],
+								fov: 50,
+								near: 0.1,
+								far: 100,
+							}}
+							shadows={false}
+							frameloop='always'
 						>
-							<StickFigure
-								position={[0, stickFigureY, 0]}
-								scale={1}
+							<color attach='background' args={['#111']} />
+							<ambientLight intensity={0.8} />
+							<directionalLight
+								position={[5, 10, 7]}
+								intensity={1.2}
+								castShadow={false}
 							/>
-							<Platform
-								sides={sides || 3}
-								mode={mode as any}
-								platformSize={1}
-								platformHeight={platformHeight}
-								onRotationChange={setPlatformRotation}
+							<pointLight
+								position={[0, 5, 5]}
+								intensity={0.5}
 							/>
-						</group>
-					</Canvas>
+							<group
+								position={[0, -1, 0]}
+								rotation={[0, platformRotation, 0]}
+							>
+								<StickFigure
+									position={[0, stickFigureY, 0]}
+									scale={1}
+								/>
+								<Platform
+									sides={sides || 3}
+									mode={mode as any}
+									platformSize={1}
+									platformHeight={platformHeight}
+									onRotationChange={setPlatformRotation}
+								/>
+							</group>
+						</Canvas>
+					</View>
+					{/*  */}
 				</View>
-				{/*  */}
+				{/* ModeSelector controls both game and scoreboard mode */}
+				<ModeSelector
+					mode={mode}
+					setMode={setMode}
+					resetGame={resetGame}
+					setShape={setShape}
+					setShowChoices={setShowChoices}
+					MODES={[...MODES]}
+					getPlatformShape={(sides: number) => {
+						const {
+							getPlatformShapeName,
+						} = require('../game/systems/platformManager');
+						return getPlatformShapeName(sides);
+					}}
+					setHighScore={setHighScore}
+				/>
+				<Text style={gameStyles.round}>Round: {round}</Text>
+				<Text style={gameStyles.shape}>
+					Platform: {shape} ({sides} sides)
+				</Text>
+				<Text style={gameStyles.narration}>
+					{narration}
+				</Text>
+				<Text style={gameStyles.streak}>
+					Streak: {streakScore} | High Score: {highScore}
+				</Text>
+				<JumpButtons
+					sides={sides}
+					safeSides={safeSides}
+					mode={mode}
+					handleJump={handleJump}
+				/>
+				<ExistentialChoices
+					showChoices={showChoices}
+					round={round}
+					existentialChoices={existentialChoices}
+					handleChoice={handleChoice}
+				/>
+				<ScoreboardTabs
+					mode={mode}
+					setMode={setMode}
+					localScoresByMode={localScoresByMode}
+					globalScoresByMode={globalScoresByMode}
+				/>
+				<CosmeticUnlocks
+					cosmeticUnlocks={cosmeticUnlocks}
+				/>
+				<HighScoreModal
+					visible={showHighScoreModal}
+					onSubmit={handleHighScoreSubmit}
+					onCancel={handleHighScoreCancel}
+					defaultName={''}
+					score={pendingScore}
+					isGlobal={
+						pendingType === 'global' ||
+						pendingType === 'both'
+					}
+					mode={mode}
+					localScores={localScoresByMode[mode] || []}
+					globalScores={globalScoresByMode[mode] || []}
+				/>
 			</View>
-			{/* ModeSelector controls both game and scoreboard mode */}
-			<ModeSelector
-				mode={mode}
-				setMode={setMode}
-				resetGame={resetGame}
-				setShape={setShape}
-				setShowChoices={setShowChoices}
-				MODES={[...MODES]}
-				getPlatformShape={(sides: number) => {
-					const {
-						getPlatformShapeName,
-					} = require('../game/systems/platformManager');
-					return getPlatformShapeName(sides);
-				}}
-				setHighScore={setHighScore}
+			<CheatcodesModal
+				visible={cheatModalOpen}
+				onClose={() => setCheatModalOpen(false)}
 			/>
-			<Text style={gameStyles.round}>Round: {round}</Text>
-			<Text style={gameStyles.shape}>
-				Platform: {shape} ({sides} sides)
-			</Text>
-			<Text style={gameStyles.narration}>{narration}</Text>
-			<Text style={gameStyles.streak}>
-				Streak: {streakScore} | High Score: {highScore}
-			</Text>
-			<JumpButtons
-				sides={sides}
-				safeSides={safeSides}
-				mode={mode}
-				handleJump={handleJump}
-			/>
-			<ExistentialChoices
-				showChoices={showChoices}
-				round={round}
-				existentialChoices={existentialChoices}
-				handleChoice={handleChoice}
-			/>
-			<ScoreboardTabs
-				mode={mode}
-				setMode={setMode}
-				localScoresByMode={localScoresByMode}
-				globalScoresByMode={globalScoresByMode}
-			/>
-			<CosmeticUnlocks cosmeticUnlocks={cosmeticUnlocks} />
-			<HighScoreModal
-				visible={showHighScoreModal}
-				onSubmit={handleHighScoreSubmit}
-				onCancel={handleHighScoreCancel}
-				defaultName={''}
-				score={pendingScore}
-				isGlobal={
-					pendingType === 'global' || pendingType === 'both'
-				}
-			/>
-		</View>
+		</>
 	);
 }

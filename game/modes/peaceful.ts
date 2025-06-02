@@ -66,10 +66,22 @@ export function getPeacefulModeState(
 	// --- 4. Narration Trigger (handled externally, but intervals provided) ---
 	// PEACEFUL_MODE_CONFIG.NARRATION_MILESTONES
 
+	// --- Disc shape for extreme mode ---
+	let shape: string;
+	if (sides === 3) shape = 'Tetrahedron';
+	else if (sides === 4) shape = 'Cube';
+	else if (sides === 6) shape = 'Hexagonal Prism';
+	else if (sides === 8) shape = 'Octagonal Prism';
+	else if (sides > 8) {
+		shape = 'Disc';
+		sides = 12; // Use 12 for disc/cylinder
+	} else shape = `${sides}-gon Prism`;
+
 	return {
 		sides,
 		safeSides,
 		dangerSide,
+		shape,
 		powerUp, // null if none this round
 	};
 }

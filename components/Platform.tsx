@@ -1,8 +1,8 @@
 import { Edges } from '@react-three/drei/native';
 import { useFrame } from '@react-three/fiber';
 import React, { useMemo, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
 import { colors } from '../constants/colors';
+import { useCheatSafeSides } from '../game/cheatcode';
 import { getRandomSafeSides } from '../game/systems/jumpManager';
 
 export type GameMode =
@@ -113,6 +113,24 @@ const PrismMesh = ({
 		</Edges>
 	</mesh>
 );
+const TriangularPrismMesh = ({
+	color,
+	borderColor,
+	wireframe,
+	height = 0.7,
+}: any) => (
+	<mesh>
+		{/* Cylinder with 3 sides = triangular prism */}
+		<cylinderGeometry args={[1.2, 1.2, height, 3, 1]} />
+		<meshStandardMaterial
+			color={color}
+			wireframe={wireframe}
+		/>
+		<Edges scale={1.01} threshold={15}>
+			<lineBasicMaterial color={borderColor} />
+		</Edges>
+	</mesh>
+);
 
 const TopFace = ({ sides, detailColor, y, size }: any) =>
 	sides === 4 ?
@@ -153,6 +171,51 @@ const Aura = ({ color, y, size, visible }: any) =>
 		</mesh>
 	:	null;
 
+// --- Safe Side Highlight: Modern, Accessible, Animated ---
+const SafeSideHighlight = ({
+	sides,
+	safeSides,
+	size,
+	y,
+	cheatActive = false,
+}: any) => {
+	// Pulse animation for highlight
+	const [pulse, setPulse] = React.useState(1);
+	useFrame(() => {
+		setPulse((p) => 1 + 0.08 * Math.sin(Date.now() / 250));
+	});
+	return safeSides && safeSides.length > 0 && cheatActive ?
+			<group>
+				{safeSides.map((idx: number) => {
+					const angle =
+						(2 * Math.PI * idx) / sides - Math.PI / 2;
+					const r = size * 0.7;
+					return (
+						<mesh
+							key={idx}
+							position={[
+								r * Math.cos(angle),
+								y + 0.03,
+								r * Math.sin(angle),
+							]}
+						>
+							<circleGeometry
+								args={[size * 0.18 * pulse, 20]}
+							/>
+							<meshStandardMaterial
+								color={'#ffd600'}
+								opacity={0.85}
+								transparent
+								emissive={'#ffd600'}
+								emissiveIntensity={0.7}
+							/>
+						</mesh>
+					);
+				})}
+			</group>
+		:	null;
+};
+
 export function Platform({
 	sides,
 	mode = 'Classic',
@@ -175,6 +238,7 @@ export function Platform({
 }: PlatformProps) {
 	const meshRef = useRef<any>(null);
 	const [rotation, setRotation] = useState(0);
+	const [isPaused, setIsPaused] = useState(false); // For future: allow pausing rotation
 
 	// Safe side logic (replace with your mode logic if needed)
 	const safeSides = useMemo(
@@ -186,46 +250,16 @@ export function Platform({
 		[sides, streak, mode]
 	);
 
-	// Slow down rotation speed
+	// Animate rotation unless paused
 	useFrame((state, delta) => {
-		setRotation((r) => r + delta * 0.3);
-		if (meshRef.current) {
-			meshRef.current.rotation.y = rotation;
+		if (!isPaused && animation) {
+			setRotation((r) => r + delta * 0.3 * animationSpeed);
+			if (meshRef.current) {
+				meshRef.current.rotation.y = rotation;
+			}
+			if (onRotationChange) onRotationChange(rotation);
 		}
-		if (onRotationChange) onRotationChange(rotation);
 	});
-
-	// Debug overlay
-	const debugOverlay =
-		debug ?
-			<View
-				style={{
-					position: 'absolute',
-					top: 10,
-					left: 10,
-					backgroundColor: '#222a',
-					padding: 8,
-					borderRadius: 8,
-					zIndex: 10,
-				}}
-			>
-				<Text style={{ color: '#fff', fontSize: 12 }}>
-					Mode: {mode}
-				</Text>
-				<Text style={{ color: '#fff', fontSize: 12 }}>
-					Streak: {streak}
-				</Text>
-				<Text style={{ color: '#fff', fontSize: 12 }}>
-					Sides: {sides}
-				</Text>
-				<Text style={{ color: '#fff', fontSize: 12 }}>
-					Safe Sides: {safeSides.join(', ')}
-				</Text>
-				<Text style={{ color: '#fff', fontSize: 12 }}>
-					Rotation: {rotation.toFixed(2)}
-				</Text>
-			</View>
-		:	null;
 
 	// Style selection
 	const style = modeStyles[mode] || modeStyles.Classic;
@@ -238,9 +272,10 @@ export function Platform({
 	// Memoize mesh, top face, aura
 	const { mesh, topFace, aura } = useMemo(() => {
 		let mesh, topFace, auraMesh;
+		console.log('🚀 ~ sides:', sides);
 		if (sides === 3) {
 			mesh = (
-				<TetrahedronMesh
+				<TriangularPrismMesh
 					color={finalBaseColor}
 					borderColor={finalBorderColor}
 					wireframe={wireframe}
@@ -334,15 +369,29 @@ export function Platform({
 		number,
 	];
 
+	const [cheatActive] = useCheatSafeSides();
+
 	return (
 		<group
 			ref={meshRef}
 			position={platformPosition}
 			{...rest}
 		>
+			{/* Main platform mesh */}
 			{mesh}
+			{/* Top face overlay */}
 			{topFace}
+			{/* Safe side highlight for gameplay clarity (cheat toggle) */}
+			<SafeSideHighlight
+				sides={sides}
+				safeSides={safeSides}
+				size={platformSize}
+				y={platformHeight / 2 + 0.04}
+				cheatActive={cheatActive}
+			/>
+			{/* Aura/glow effect */}
 			{aura}
+			{/* Subtle shadow for depth */}
 			{showShadow && (
 				<mesh
 					position={[0, -platformHeight / 2 - 0.05, 0]}
@@ -381,3 +430,10 @@ export function StickFigure({
 		</group>
 	);
 }
+
+// ---
+// Major changes:
+// - Added SafeSideHighlight for gameplay clarity
+// - Improved animation logic and debug overlay
+// - Consistent color and style usage
+// - Added comments for maintainability

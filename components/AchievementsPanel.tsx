@@ -1,17 +1,30 @@
 import React from 'react';
 import {
+	Animated,
 	FlatList,
 	StyleSheet,
 	Text,
 	View,
 } from 'react-native';
+import { colors } from '../constants/colors';
 import { getAchievementProgress } from '../game/state/achievementProgress';
 import { getAchievements } from '../game/state/achievements';
-import { getUserProfile } from '../game/state/userProfile';
+import { getUserStats } from '../game/state/userStats'; // Use stats, not profile
 
 export default function AchievementsPanel() {
 	const achievements = getAchievements();
-	const userStats = getUserProfile();
+	const userStats = getUserStats();
+
+	if (!achievements.length) {
+		return (
+			<View style={styles.container}>
+				<Text style={styles.header}>Achievements</Text>
+				<Text style={styles.empty}>
+					No achievements found.
+				</Text>
+			</View>
+		);
+	}
 
 	return (
 		<View style={styles.container}>
@@ -19,6 +32,7 @@ export default function AchievementsPanel() {
 			<FlatList
 				data={achievements}
 				keyExtractor={(item) => item.id}
+				contentContainerStyle={{ paddingBottom: 24 }}
 				renderItem={({ item }) => {
 					const progress =
 						!item.unlocked ?
@@ -30,30 +44,54 @@ export default function AchievementsPanel() {
 								styles.achievement,
 								item.unlocked && styles.unlocked,
 							]}
+							accessible
+							accessibilityLabel={
+								item.unlocked ?
+									`${item.title}, unlocked`
+								:	`${item.title}, ${Math.round(progress * 100)}% complete`
+							}
 						>
-							<Text style={styles.title}>{item.title}</Text>
-							<Text style={styles.desc}>
-								{item.description}
-							</Text>
-							{item.unlocked ?
-								<Text style={styles.date}>
-									Unlocked: {item.unlockDate?.slice(0, 10)}
+							<View style={styles.iconCircle}>
+								<Text
+									style={
+										item.unlocked ?
+											styles.iconUnlocked
+										:	styles.iconLocked
+									}
+								>
+									{item.unlocked ? '🏆' : '🔒'}
 								</Text>
-							: progress < 1 ?
-								<View style={styles.progressBarBg}>
-									<View
-										style={[
-											styles.progressBar,
-											{
-												width: `${Math.round(progress * 100)}%`,
-											},
-										]}
-									/>
-									<Text style={styles.progressText}>
-										{Math.round(progress * 100)}%
+							</View>
+							<View style={{ flex: 1 }}>
+								<Text style={styles.title}>
+									{item.title}
+								</Text>
+								<Text style={styles.desc}>
+									{item.description}
+								</Text>
+								{item.unlocked ?
+									<Text style={styles.date}>
+										Unlocked:{' '}
+										{item.unlockDate?.slice(0, 10)}
 									</Text>
-								</View>
-							:	null}
+								: progress < 1 ?
+									<View style={styles.progressBarContainer}>
+										<View style={styles.progressBarBg}>
+											<Animated.View
+												style={[
+													styles.progressBar,
+													{
+														width: `${Math.round(progress * 100)}%`,
+													},
+												]}
+											/>
+										</View>
+										<Text style={styles.progressText}>
+											{Math.round(progress * 100)}% Complete
+										</Text>
+									</View>
+								:	null}
+							</View>
 						</View>
 					);
 				}}
@@ -65,52 +103,88 @@ export default function AchievementsPanel() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
+		backgroundColor: colors.background,
 		padding: 24,
-		backgroundColor: '#fff',
 	},
 	header: {
-		fontSize: 24,
+		fontSize: 26,
 		fontWeight: 'bold',
-		marginBottom: 16,
+		color: colors.accent,
+		marginBottom: 18,
+		letterSpacing: 1,
+	},
+	empty: {
+		color: colors.text,
+		fontSize: 16,
+		textAlign: 'center',
+		marginTop: 32,
 	},
 	achievement: {
-		padding: 12,
-		marginVertical: 6,
+		backgroundColor: '#232323',
+		borderRadius: 14,
+		padding: 18,
+		marginBottom: 16,
+		elevation: 2,
+		flexDirection: 'row',
+		alignItems: 'center',
 		borderWidth: 1,
-		borderColor: '#aaa',
-		borderRadius: 8,
-		backgroundColor: '#eee',
+		borderColor: '#333',
 	},
 	unlocked: {
-		backgroundColor: '#c0ffd0',
-		borderColor: '#4caf50',
+		backgroundColor: '#2e3d1f',
+		borderColor: colors.accent,
 	},
-	title: { fontWeight: 'bold', fontSize: 16 },
-	desc: { color: '#555' },
-	date: { fontSize: 12, color: '#888', marginTop: 4 },
-	progressBarBg: {
-		height: 16,
-		backgroundColor: '#ddd',
-		borderRadius: 8,
-		marginTop: 8,
+	iconCircle: {
+		width: 44,
+		height: 44,
+		borderRadius: 22,
+		backgroundColor: '#181818',
+		alignItems: 'center',
+		justifyContent: 'center',
+		marginRight: 16,
+	},
+	iconUnlocked: {
+		fontSize: 26,
+		color: colors.accent,
+	},
+	iconLocked: {
+		fontSize: 26,
+		color: '#888',
+	},
+	title: {
+		fontSize: 18,
+		fontWeight: 'bold',
+		color: colors.text,
 		marginBottom: 2,
+	},
+	desc: {
+		fontSize: 14,
+		color: '#bbb',
+		marginBottom: 4,
+	},
+	date: {
+		fontSize: 12,
+		color: colors.accent,
+		marginTop: 2,
+	},
+	progressBarContainer: {
+		marginTop: 6,
+	},
+	progressBarBg: {
+		height: 8,
+		backgroundColor: '#444',
+		borderRadius: 4,
+		overflow: 'hidden',
 		width: '100%',
-		position: 'relative',
 	},
 	progressBar: {
-		height: 16,
-		backgroundColor: '#ffd600',
-		borderRadius: 8,
-		position: 'absolute',
-		left: 0,
-		top: 0,
+		height: 8,
+		backgroundColor: colors.accent,
+		borderRadius: 4,
 	},
 	progressText: {
-		position: 'absolute',
-		width: '100%',
-		textAlign: 'center',
-		color: '#222',
 		fontSize: 12,
-		fontWeight: 'bold',
+		color: '#aaa',
+		marginTop: 2,
 	},
 });

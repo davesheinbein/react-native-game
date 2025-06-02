@@ -16,6 +16,7 @@ export function getClassicModeState(
 ) {
 	// --- 1. Platform Progression (Sides) ---
 	let sides = currentSides;
+	console.log('🚀 ~ sides:', sides);
 	for (const m of CLASSIC_MODE_CONFIG.MILESTONES) {
 		if (
 			round === m &&
@@ -75,10 +76,22 @@ export function getClassicModeState(
 	// --- 5. Safe Sides Selection ---
 	const safeSides = getRandomSafeSides(sides, safeCount);
 
-	// --- 6. Return state (expandable for narration, power-ups, etc) ---
+	// --- Disc shape for extreme mode ---
+	let shape: string;
+	if (sides === 3) shape = 'Tetrahedron';
+	else if (sides === 4) shape = 'Cube';
+	else if (sides === 6) shape = 'Hexagonal Prism';
+	else if (sides === 8) shape = 'Octagonal Prism';
+	else if (sides > 8) {
+		shape = 'Disc';
+		sides = 12; // Use 12 for disc/cylinder
+		safeCount = 1;
+	} else shape = `${sides}-gon Prism`;
+
 	return {
 		sides,
 		safeSides,
+		shape,
 		powerUp, // null if none this round
 	};
 }

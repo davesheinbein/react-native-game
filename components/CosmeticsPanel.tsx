@@ -14,6 +14,14 @@ import {
 	getUserProfile,
 	updateUserProfile,
 } from '../game/state/userProfile';
+import CosmeticPreview from './CosmeticPreview';
+
+/**
+ * CosmeticsPanel: View, unlock, and equip cosmetics.
+ * - Shows preview for each cosmetic
+ * - Clear feedback for equip/unlock
+ * - Accessible and modern UI
+ */
 
 export default function CosmeticsPanel() {
 	const [cosmetics, setCosmetics] =
@@ -43,10 +51,20 @@ export default function CosmeticsPanel() {
 							item.unlocked && styles.unlocked,
 						]}
 					>
-						<Text>{item.name}</Text>
+						<CosmeticPreview cosmetic={item} />
+						<Text
+							style={{
+								fontWeight: 'bold',
+								marginBottom: 4,
+							}}
+						>
+							{item.name}
+						</Text>
 						{item.unlocked ?
 							<TouchableOpacity
 								onPress={() => handleEquip(item.id)}
+								accessibilityRole='button'
+								accessibilityLabel={`Equip ${item.name}`}
 							>
 								<Text
 									style={
@@ -70,6 +88,8 @@ export default function CosmeticsPanel() {
 							</TouchableOpacity>
 						:	<TouchableOpacity
 								onPress={() => handleUnlock(item.id)}
+								accessibilityRole='button'
+								accessibilityLabel={`Unlock ${item.name}`}
 							>
 								<Text style={styles.unlockBtn}>Unlock</Text>
 							</TouchableOpacity>

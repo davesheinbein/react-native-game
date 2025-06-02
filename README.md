@@ -1,51 +1,58 @@
-# Welcome to your Expo app 👋
+# Don't Miss: A Modern Platform-Jumping Web Game
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Play now: [dont-miss--vy2c1avh64.expo.app/game](https://dont-miss--vy2c1avh64.expo.app/game)
 
-## Get started
+---
 
-1. Install dependencies
+A dynamic, accessible, and visually modern platform-jumping game built with React Native, Expo, and Three.js (via @react-three/fiber).
 
+- **Jump between 3D platforms** of evolving shapes: Tetrahedron, Cube, Hexagonal Prism, Octagonal Prism, and Disc.
+- **Multiple game modes:** Classic, Endless, Maniac, and Peaceful, each with unique difficulty scaling and rules.
+- **Accessibility-first UI/UX:** Keyboard, screen reader, and colorblind-friendly.
+- **Leaderboards:** Local and global high scores for every mode.
+- **Cosmetics & Achievements:** Unlock and equip visual upgrades and earn achievements as you play.
+- **Cheatcodes:** Discover and toggle special features for fun and accessibility.
+
+## Getting Started (Local Development)
+
+1. **Clone the repo:**
+   ```bash
+   git clone https://github.com/davesheinbein/react-native-game.git
+   cd react-native-game
+   ```
+2. **Install dependencies:**
    ```bash
    npm install
    ```
-
-2. Start the app
-
+3. **Start the app:**
    ```bash
    npx expo start
    ```
+4. **Open in browser:**
+   - Press `w` in the Expo CLI to open the web version, or scan the QR code for mobile.
 
-In the output, you'll find options to open the app in a
+## Features
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- **3D platform shapes** that evolve with your streak
+- **Safe side highlighting** (with optional cheatcode)
+- **Modern, unified modals and UI**
+- **Power-ups, penalties, and narration**
+- **Persistent user stats, achievements, and cosmetics**
+- **Cloud leaderboard integration**
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Project Structure
 
-## Get a fresh project
+- `app/` — Main screens and routing
+- `components/` — UI components (Platform, Modals, Scoreboard, etc.)
+- `game/` — Game logic, state, and systems
+- `constants/` — Config, colors, and text
+- `assets/` — Images, sounds, and fonts
 
-When you're ready, run:
+## Play Online
 
-```bash
-npm run reset-project
-```
+You can play the latest version instantly at:
+[https://dont-miss--vy2c1avh64.expo.app/game](https://dont-miss--vy2c1avh64.expo.app/game)
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## License
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-# react-native-game
+MIT

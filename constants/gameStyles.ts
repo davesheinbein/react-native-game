@@ -1,14 +1,16 @@
-export const gameStyles = {
+import { StyleSheet } from 'react-native';
+
+export const gameStyles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: '#181c24',
-		alignItems: 'center',
-		justifyContent: 'flex-start',
+		alignItems: 'center', // FlexAlignType
+		justifyContent: 'flex-start', // FlexAlignType
 		paddingTop: 32,
 	},
 	title: {
 		fontSize: 32,
-		fontWeight: 'bold',
+		fontWeight: '700', // Use numeric string for RN compatibility
 		color: '#ffd600',
 		marginBottom: 18,
 		letterSpacing: 2,
@@ -33,7 +35,7 @@ export const gameStyles = {
 	narration: {
 		fontSize: 16,
 		color: '#b2ebf2',
-		fontStyle: 'italic',
+		fontStyle: 'italic', // 'italic' is valid
 		marginBottom: 2,
 		textAlign: 'center',
 		paddingHorizontal: 12,
@@ -41,7 +43,7 @@ export const gameStyles = {
 	streak: {
 		fontSize: 16,
 		color: '#81c784',
-		fontWeight: 'bold',
+		fontWeight: '700',
 		marginBottom: 10,
 		letterSpacing: 1,
 	},
@@ -172,4 +174,4 @@ export const gameStyles = {
 		textAlign: 'center',
 		marginBottom: 8,
 	},
-};
+});

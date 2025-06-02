@@ -12,6 +12,13 @@ const builtInAvatars = [
 	require('../assets/images/avatar3.png'),
 ];
 
+/**
+ * AvatarPicker: Choose from built-in avatars or use a custom URL.
+ * - Highlights selected avatar
+ * - Calls onChange with avatar URI or require() object
+ * - Accessible and visually clear
+ */
+
 export default function AvatarPicker({
 	value,
 	onChange,
@@ -19,12 +26,15 @@ export default function AvatarPicker({
 	value: string;
 	onChange: (v: string) => void;
 }) {
+	const isCustom = value && !builtInAvatars.includes(value);
 	return (
 		<View style={styles.row}>
 			{builtInAvatars.map((img, idx) => (
 				<TouchableOpacity
 					key={idx}
 					onPress={() => onChange(img)}
+					accessibilityRole='button'
+					accessibilityLabel={`Select avatar ${idx + 1}`}
 				>
 					<Image
 						source={img}
@@ -35,6 +45,19 @@ export default function AvatarPicker({
 					/>
 				</TouchableOpacity>
 			))}
+			{/* Show custom avatar if set and not built-in */}
+			{isCustom ?
+				<TouchableOpacity
+					onPress={() => onChange(value)}
+					accessibilityRole='button'
+					accessibilityLabel='Select custom avatar'
+				>
+					<Image
+						source={{ uri: value }}
+						style={[styles.avatar, styles.selected]}
+					/>
+				</TouchableOpacity>
+			:	null}
 		</View>
 	);
 }

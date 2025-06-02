@@ -81,13 +81,25 @@ export function getEndlessModeState(
 		}
 	}
 
-	// --- 4. Safe Sides Selection ---
+	// --- Disc shape for extreme mode ---
+	let shape: string;
+	if (sides === 3) shape = 'Tetrahedron';
+	else if (sides === 4) shape = 'Cube';
+	else if (sides === 6) shape = 'Hexagonal Prism';
+	else if (sides === 8) shape = 'Octagonal Prism';
+	else if (sides > 8) {
+		shape = 'Disc';
+		sides = 12; // Use 12 for disc/cylinder
+		safeCount = 1;
+	} else shape = `${sides}-gon Prism`;
+
 	const safeSides = getRandomSafeSides(sides, safeCount);
 
 	// --- 5. Return state (expandable for narration, power-ups, etc) ---
 	return {
 		sides,
 		safeSides,
+		shape,
 		powerUp, // null if none this round
 	};
 }
