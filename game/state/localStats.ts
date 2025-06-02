@@ -3,24 +3,56 @@ import { maybeSubmitHighScore } from './firebaseConfigLeaderboard';
 
 const storage = new MMKV();
 
-// Save any value (object, array, number, string)
-export function saveStat(key: string, value: any) {
-	storage.set(key, JSON.stringify(value));
+/**
+ * Save any value (object, array, number, string) to MMKV storage.
+ * @param key Storage key
+ * @param value Value to store (will be JSON-stringified)
+ */
+export function saveStat<T = any>(
+	key: string,
+	value: T
+): void {
+	try {
+		storage.set(key, JSON.stringify(value));
+	} catch (e) {
+		console.error(
+			`Failed to save stat for key '${key}':`,
+			e
+		);
+	}
 }
 
-// Retrieve a value, with optional fallback
-type StatType<T> = T | undefined;
+/**
+ * Retrieve a value from MMKV storage, with optional fallback.
+ * Handles JSON parsing errors gracefully.
+ * @param key Storage key
+ * @param fallback Value to return if key is not found or parse fails
+ * @returns Parsed value or fallback
+ */
 export function getStat<T = any>(
 	key: string,
 	fallback?: T
-): StatType<T> {
+): T | undefined {
 	const val = storage.getString(key);
-	if (val) return JSON.parse(val);
+	if (val) {
+		try {
+			return JSON.parse(val) as T;
+		} catch (e) {
+			console.warn(
+				`Corrupt or invalid JSON for key '${key}':`,
+				e
+			);
+			removeStat(key); // Clean up corrupt data
+		}
+	}
 	return fallback;
 }
 
-// Remove a stat
-export function removeStat(key: string) {
+/**
+ * Remove a stat from MMKV storage.
+ * @param key Storage key
+ */
+export function removeStat(key: string): void {
 	storage.delete(key);
 }
 
@@ -28,11 +60,10 @@ export function removeStat(key: string) {
 
 /**
  * Update high score both locally and globally if it qualifies.
- * @param {Object} params
- * @param {string} params.name - Player name
- * @param {number} params.score - New high score
- * @param {string} params.mode - Game mode
- * @param {string} [params.region] - Optional region
+ * @param params.name Player name
+ * @param params.score New high score
+ * @param params.mode Game mode
+ * @param params.region Optional region
  */
 export async function updateHighScoreEverywhere({
 	name,
@@ -44,9 +75,19 @@ export async function updateHighScoreEverywhere({
 	score: number;
 	mode: string;
 	region?: string;
-}) {
-	// Save locally
+}): Promise<void> {
 	saveStat('highScore', score);
-	// Update global leaderboard if needed
-	await maybeSubmitHighScore({ name, score, mode, region });
+	try {
+		await maybeSubmitHighScore({
+			name,
+			score,
+			mode,
+			region,
+		});
+	} catch (e) {
+		console.error(
+			'Failed to submit high score globally:',
+			e
+		);
+	}
 }

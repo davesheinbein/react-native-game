@@ -1,5 +1,10 @@
-import { Stack } from "expo-router";
+import { Stack } from 'expo-router';
+import { ToastProvider } from '../components/ToastProvider';
 
 export default function RootLayout() {
-  return <Stack />;
+	return (
+		<ToastProvider>
+			<Stack />
+		</ToastProvider>
+	);
 }
