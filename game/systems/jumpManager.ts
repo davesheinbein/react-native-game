@@ -3,6 +3,7 @@ import {
 	fallSound,
 	jumpSound,
 } from '../audio/soundEffects';
+import { getRandomizeShapeCheat } from '../cheatcode';
 import {
 	getMilestoneIntervals,
 	getNextState,
@@ -117,6 +118,26 @@ export function handleJump({
 		} as any, // Type cast for compatibility
 		side
 	);
+	// --- Cheat: Randomize shape after every jump ---
+	if (getRandomizeShapeCheat()) {
+		// Pick a random shape from the supported set
+		const shapes = [
+			'Tetrahedron',
+			'Cube',
+			'Hexagonal Prism',
+			'Octagonal Prism',
+			'Disc',
+		];
+		const randomShape =
+			shapes[Math.floor(Math.random() * shapes.length)];
+		next.shape = randomShape;
+		// Optionally, adjust sides for Disc
+		if (randomShape === 'Disc') next.sides = 12;
+		if (randomShape === 'Tetrahedron') next.sides = 3;
+		if (randomShape === 'Cube') next.sides = 4;
+		if (randomShape === 'Hexagonal Prism') next.sides = 6;
+		if (randomShape === 'Octagonal Prism') next.sides = 8;
+	}
 	setMode(next.mode);
 	setShape(next.shape);
 	setSides(next.sides);

@@ -7,6 +7,7 @@ import {
 	View,
 } from 'react-native';
 import { CheatcodesModal } from './CheatcodesModal';
+import GameRulesModal from './GameRulesModal';
 
 /**
  * SettingsPanel: Floating settings menu for music, SFX, mute, and high score reset.
@@ -46,25 +47,22 @@ export function SettingsPanel({
 	musicTitle,
 	musicIndex,
 }: SettingsPanelProps) {
-	const [cheatModalOpen, setCheatModalOpen] =
-		React.useState(false);
+	const [cheatModalOpen, setCheatModalOpen] = React.useState(false);
+	const [rulesModalOpen, setRulesModalOpen] = React.useState(false);
 
 	return (
 		<View style={styles.panelRoot}>
-			{!isOpen ?
+			{!isOpen ? (
 				<TouchableOpacity
 					onPress={onOpen}
 					accessibilityRole='button'
 					accessibilityLabel='Open settings'
 					style={styles.iconBtn}
 				>
-					<MaterialCommunityIcons
-						name='cog-outline'
-						size={32}
-						color='#ffd600'
-					/>
+					<MaterialCommunityIcons name='cog-outline' size={32} color='#ffd600' />
 				</TouchableOpacity>
-			:	<View style={styles.panelOpen}>
+			) : (
+				<View style={styles.panelOpen}>
 					{/* Close button */}
 					<TouchableOpacity
 						onPress={onClose}
@@ -72,30 +70,26 @@ export function SettingsPanel({
 						accessibilityLabel='Close settings'
 						style={styles.iconBtn}
 					>
-						<MaterialCommunityIcons
-							name='close-circle-outline'
-							size={28}
-							color='#ffd600'
-						/>
+						<MaterialCommunityIcons name='close-circle-outline' size={32} color='#ffd600' />
+					</TouchableOpacity>
+					{/* Rules icon button */}
+					<TouchableOpacity
+						onPress={() => setRulesModalOpen(true)}
+						accessibilityRole='button'
+						accessibilityLabel='Show game rules and how to play'
+						style={styles.iconBtn}
+					>
+						<MaterialCommunityIcons name='book-open-variant' size={26} color='#ffd600' />
+						<Text style={styles.cheatLabel}>Rules</Text>
 					</TouchableOpacity>
 					{/* Music play/pause */}
 					<TouchableOpacity
 						onPress={onToggleMusic}
 						accessibilityRole='button'
-						accessibilityLabel={
-							isMusicPlaying ? 'Pause music' : 'Play music'
-						}
+						accessibilityLabel={isMusicPlaying ? 'Pause music' : 'Play music'}
 						style={styles.iconBtn}
 					>
-						<MaterialCommunityIcons
-							name={
-								isMusicPlaying ?
-									'pause-circle-outline'
-								:	'play-circle-outline'
-							}
-							size={28}
-							color='#b2dfdb'
-						/>
+						<MaterialCommunityIcons name={isMusicPlaying ? 'pause-circle-outline' : 'play-circle-outline'} size={28} color='#b2dfdb' />
 					</TouchableOpacity>
 					{/* Next track */}
 					<TouchableOpacity
@@ -104,43 +98,25 @@ export function SettingsPanel({
 						accessibilityLabel='Change music track'
 						style={styles.iconBtn}
 					>
-						<Text style={styles.musicTitle}>
-							{musicTitle} (tap to change)
-						</Text>
+						<Text style={styles.musicTitle}>{musicTitle} (tap to change)</Text>
 					</TouchableOpacity>
 					{/* Mute toggle */}
 					<TouchableOpacity
 						onPress={onToggleMute}
 						accessibilityRole='button'
-						accessibilityLabel={
-							isMuted ? 'Unmute all' : 'Mute all'
-						}
+						accessibilityLabel={isMuted ? 'Unmute all' : 'Mute all'}
 						style={styles.iconBtn}
 					>
-						<MaterialCommunityIcons
-							name={isMuted ? 'volume-off' : 'volume-high'}
-							size={28}
-							color='#ffd600'
-						/>
+						<MaterialCommunityIcons name={isMuted ? 'volume-off' : 'volume-high'} size={28} color='#ffd600' />
 					</TouchableOpacity>
 					{/* SFX toggle */}
 					<TouchableOpacity
 						onPress={onToggleSfx}
 						accessibilityRole='button'
-						accessibilityLabel={
-							sfxEnabled ? 'Disable SFX' : 'Enable SFX'
-						}
+						accessibilityLabel={sfxEnabled ? 'Disable SFX' : 'Enable SFX'}
 						style={styles.iconBtn}
 					>
-						<MaterialCommunityIcons
-							name={
-								sfxEnabled ?
-									'bell-ring-outline'
-								:	'bell-off-outline'
-							}
-							size={26}
-							color='#ffd600'
-						/>
+						<MaterialCommunityIcons name={sfxEnabled ? 'bell-ring-outline' : 'bell-off-outline'} size={26} color='#ffd600' />
 					</TouchableOpacity>
 					{/* Reset high score */}
 					<TouchableOpacity
@@ -149,11 +125,7 @@ export function SettingsPanel({
 						accessibilityLabel='Reset High Score'
 						style={styles.iconBtn}
 					>
-						<MaterialCommunityIcons
-							name='restore'
-							size={26}
-							color='#ffd600'
-						/>
+						<MaterialCommunityIcons name='restore' size={26} color='#ffd600' />
 					</TouchableOpacity>
 					{/* Cheatcodes button with tooltip */}
 					<TouchableOpacity
@@ -162,21 +134,13 @@ export function SettingsPanel({
 						accessibilityLabel='Open cheatcodes menu'
 						style={styles.iconBtn}
 					>
-						<MaterialCommunityIcons
-							name='code-braces'
-							size={26}
-							color='#ffd600'
-						/>
-						<Text style={styles.cheatLabel}>
-							Cheatcodes
-						</Text>
+						<MaterialCommunityIcons name='code-braces' size={26} color='#ffd600' />
+						<Text style={styles.cheatLabel}>Cheatcodes</Text>
 					</TouchableOpacity>
 				</View>
-			}
-			<CheatcodesModal
-				visible={cheatModalOpen}
-				onClose={() => setCheatModalOpen(false)}
-			/>
+			)}
+			<CheatcodesModal visible={cheatModalOpen} onClose={() => setCheatModalOpen(false)} />
+			<GameRulesModal visible={rulesModalOpen} onClose={() => setRulesModalOpen(false)} />
 		</View>
 	);
 }

@@ -8,7 +8,10 @@ import {
 	TouchableOpacity,
 	View,
 } from 'react-native';
-import { useCheatSafeSides } from '../game/cheatcode';
+import {
+	useCheatSafeSides,
+	useRandomizeShapeCheat,
+} from '../game/cheatcode';
 
 // CheatcodesModal: Unified modal style, accessible, modern
 export function CheatcodesModal({
@@ -20,6 +23,8 @@ export function CheatcodesModal({
 }) {
 	const [showSafeSides, setShowSafeSides] =
 		useCheatSafeSides();
+	const [randomizeShape, setRandomizeShape] =
+		useRandomizeShapeCheat();
 	return (
 		<Modal
 			visible={visible}
@@ -64,6 +69,17 @@ export function CheatcodesModal({
 							value={showSafeSides}
 							onValueChange={setShowSafeSides}
 							accessibilityLabel='Toggle safe side visibility'
+						/>
+					</View>
+					{/* Randomize shape toggle */}
+					<View style={styles.row}>
+						<Text style={styles.label}>
+							Randomize Shape Every Jump
+						</Text>
+						<Switch
+							value={randomizeShape}
+							onValueChange={setRandomizeShape}
+							accessibilityLabel='Toggle randomize platform shape after every jump'
 						/>
 					</View>
 					<Text style={styles.tip}>

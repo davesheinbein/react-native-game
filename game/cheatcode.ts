@@ -2,15 +2,16 @@
 // Usage: import { useCheatSafeSides } from '../game/cheatcode';
 // Call useCheatSafeSides() in your Platform or game component
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 // Global (module-level) toggle for safe side visibility
 let _showSafeSides = false;
-const listeners: Array<(val: boolean) => void> = [];
+const safeSidesListeners: Array<(val: boolean) => void> =
+	[];
 
 export function setShowSafeSidesCheat(val: boolean) {
 	_showSafeSides = val;
-	listeners.forEach((cb) => cb(val));
+	safeSidesListeners.forEach((cb) => cb(val));
 }
 
 export function getShowSafeSidesCheat() {
@@ -25,13 +26,46 @@ export function useCheatSafeSides(): [
 	const [show, setShow] = useState(_showSafeSides);
 	// Subscribe/unsubscribe to global changes
 	useEffect(() => {
-		listeners.push(setShow);
+		safeSidesListeners.push(setShow);
 		return () => {
-			const idx = listeners.indexOf(setShow);
-			if (idx !== -1) listeners.splice(idx, 1);
+			const idx = safeSidesListeners.indexOf(setShow);
+			if (idx !== -1) safeSidesListeners.splice(idx, 1);
 		};
 	}, []);
 	return [show, setShowSafeSidesCheat];
+}
+
+// --- Cheatcode: Randomize shape after every jump ---
+let _randomizeShapeCheat = false;
+const randomizeShapeListeners: Array<
+	(val: boolean) => void
+> = [];
+export function setRandomizeShapeCheat(val: boolean) {
+	_randomizeShapeCheat = val;
+	randomizeShapeListeners.forEach((cb) =>
+		cb(_randomizeShapeCheat)
+	);
+}
+export function getRandomizeShapeCheat() {
+	return _randomizeShapeCheat;
+}
+export function useRandomizeShapeCheat(): [
+	boolean,
+	(val: boolean) => void,
+] {
+	const [val, setVal] = React.useState(
+		_randomizeShapeCheat
+	);
+	React.useEffect(() => {
+		const cb = (v: boolean) => setVal(v);
+		randomizeShapeListeners.push(cb);
+		return () => {
+			const idx = randomizeShapeListeners.indexOf(cb);
+			if (idx !== -1)
+				randomizeShapeListeners.splice(idx, 1);
+		};
+	}, []);
+	return [val, setRandomizeShapeCheat];
 }
 
 // Optionally, expose a keyboard shortcut for dev/testing (web only)
