@@ -402,6 +402,16 @@ export default function Game() {
 		}
 	);
 
+	const [platformRotation, setPlatformRotation] =
+		React.useState(0);
+	const platformRef = React.useRef<any>(null);
+	const stickFigureRef = React.useRef<any>(null);
+	const platformHeight = 0.8;
+	// const stickFigureBaseY = -0.45; // lowest y of stickman mesh
+	const stickFigureBaseY = 1; // lowest y of stickman mesh
+	const stickFigureY =
+		platformHeight / 2 + Math.abs(stickFigureBaseY) + 0.05; // 0.05 = small gap
+
 	return (
 		<View
 			style={gameStyles.container}
@@ -424,7 +434,7 @@ export default function Game() {
 				musicTitle={soundtrackTitles[musicIndex]}
 				musicIndex={musicIndex}
 			/>
-			<Text style={gameStyles.title}>Don't Jump</Text>
+			<Text style={gameStyles.title}>Don't Miss</Text>
 			<View
 				style={{
 					flexDirection: 'row',
@@ -432,15 +442,14 @@ export default function Game() {
 					marginBottom: 16,
 				}}
 			>
-				{/* Player: Stickman */}
 				<View
-					style={{ alignItems: 'center', marginLeft: 8 }}
+					style={{ alignItems: 'center' }}
 					className='canvas-container'
 				>
 					<Canvas
 						style={{
-							width: 180,
-							height: 180,
+							width: 250,
+							height: 250,
 							backgroundColor: 'transparent',
 							borderRadius: 16,
 						}}
@@ -464,49 +473,22 @@ export default function Game() {
 							position={[0, 5, 5]}
 							intensity={0.5}
 						/>
-						{/* StickFigure at y=0.7, PlatformShape at y=0 */}
-						<StickFigure position={[0, 0.7, 0]} scale={1} />
-					</Canvas>
-				</View>
-
-				{/* Shapes: Platform */}
-				<View
-					style={{ alignItems: 'center', marginRight: 8 }}
-					className='canvas-container'
-				>
-					<Canvas
-						style={{
-							width: 180,
-							height: 180,
-							backgroundColor: 'transparent',
-							borderRadius: 16,
-						}}
-						camera={{
-							position: [0, 0, 5],
-							fov: 50,
-							near: 0.1,
-							far: 100,
-						}}
-						shadows={false}
-						frameloop='always'
-					>
-						<color attach='background' args={['#111']} />
-						<ambientLight intensity={0.8} />
-						<directionalLight
-							position={[5, 10, 7]}
-							intensity={1.2}
-							castShadow={false}
-						/>
-						<pointLight
-							position={[0, 5, 5]}
-							intensity={0.5}
-						/>
-						<Platform
-							sides={sides || 3}
-							mode={mode as any}
-							platformSize={1}
-							platformHeight={0.8}
-						/>
+						<group
+							position={[0, -1, 0]}
+							rotation={[0, platformRotation, 0]}
+						>
+							<StickFigure
+								position={[0, stickFigureY, 0]}
+								scale={1}
+							/>
+							<Platform
+								sides={sides || 3}
+								mode={mode as any}
+								platformSize={1}
+								platformHeight={platformHeight}
+								onRotationChange={setPlatformRotation}
+							/>
+						</group>
 					</Canvas>
 				</View>
 				{/*  */}

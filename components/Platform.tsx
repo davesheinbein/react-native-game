@@ -1,9 +1,7 @@
 import { Edges } from '@react-three/drei/native';
-import { useFrame } from '@react-three/fiber/native';
-import * as React from 'react';
-import { useMemo, useRef, useState } from 'react';
+import { useFrame } from '@react-three/fiber';
+import React, { useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
-import * as THREE from 'three';
 import { colors } from '../constants/colors';
 import { getRandomSafeSides } from '../game/systems/jumpManager';
 
@@ -31,6 +29,7 @@ export interface PlatformProps {
 	rotationSpeed?: number;
 	onFall?: (sideHit: number) => void;
 	['data-testid']?: string;
+	onRotationChange?: (rotation: number) => void;
 }
 
 const modeStyles: Record<GameMode, any> = {
@@ -171,9 +170,10 @@ export function Platform({
 	debug = false,
 	rotationSpeed = 0.01,
 	onFall,
+	onRotationChange,
 	...rest
 }: PlatformProps) {
-	const meshRef = useRef<THREE.Group>(null);
+	const meshRef = useRef<any>(null);
 	const [rotation, setRotation] = useState(0);
 
 	// Safe side logic (replace with your mode logic if needed)
@@ -186,13 +186,13 @@ export function Platform({
 		[sides, streak, mode]
 	);
 
-	// Animation: rotate platform
-	useFrame(() => {
+	// Slow down rotation speed
+	useFrame((state, delta) => {
+		setRotation((r) => r + delta * 0.3);
 		if (meshRef.current) {
-			meshRef.current.rotation.y +=
-				rotationSpeed * animationSpeed;
-			setRotation(meshRef.current.rotation.y);
+			meshRef.current.rotation.y = rotation;
 		}
+		if (onRotationChange) onRotationChange(rotation);
 	});
 
 	// Debug overlay
@@ -356,6 +356,28 @@ export function Platform({
 					/>
 				</mesh>
 			)}
+		</group>
+	);
+}
+
+export function StickFigure({
+	position = [0, 0, 0],
+	scale = 1,
+	rotation = [0, 0, 0],
+	...props
+}) {
+	// Ensure rotation is always a 3-tuple
+	const rot: [number, number, number] = [
+		rotation[0] || 0,
+		rotation[1] || 0,
+		rotation[2] || 0,
+	];
+	return (
+		<group
+			position={position as [number, number, number]}
+			rotation={rot}
+		>
+			{/* ...existing stick figure mesh code... */}
 		</group>
 	);
 }

@@ -153,17 +153,39 @@ export function StickFigure({
 				-Math.PI / 4 -
 				0.15 * Math.sin(t * 2.2) -
 				0.08 * Math.cos(t * 3.1);
-		// Legs wave
+		// Legs: kick forward/backward more when jumping, subtle walk otherwise
 		if (leftLegRef.current)
 			leftLegRef.current.rotation.z =
-				Math.PI / 8 +
-				0.08 * Math.sin(t * 1.5) +
-				0.06 * Math.cos(t * 2.3);
+				isJumping ?
+					Math.PI / 8 +
+					0.55 *
+						Math.sin(
+							Math.PI *
+								((jumpStart.current !== null ?
+									state.clock.getElapsedTime() -
+									jumpStart.current
+								:	0) /
+									jumpDuration)
+						)
+				:	Math.PI / 8 +
+					0.18 * Math.sin(t * 2.2) +
+					0.06 * Math.cos(t * 2.3);
 		if (rightLegRef.current)
 			rightLegRef.current.rotation.z =
-				-Math.PI / 8 -
-				0.08 * Math.sin(t * 1.5) -
-				0.06 * Math.sin(t * 2.3);
+				isJumping ?
+					-Math.PI / 8 -
+					0.55 *
+						Math.sin(
+							Math.PI *
+								((jumpStart.current !== null ?
+									state.clock.getElapsedTime() -
+									jumpStart.current
+								:	0) /
+									jumpDuration)
+						)
+				:	-Math.PI / 8 -
+					0.18 * Math.sin(t * 2.2) -
+					0.06 * Math.sin(t * 2.3);
 	});
 
 	// Prop validation (basic)
@@ -187,7 +209,7 @@ export function StickFigure({
 			<group ref={groupRef}>
 				{/* Hollow Head: Torus */}
 				<mesh
-					position={[0, 0.6, 0]}
+					position={[0, 0.69, 0]}
 					castShadow
 					receiveShadow
 				>
@@ -198,14 +220,30 @@ export function StickFigure({
 						emissiveIntensity={0.25}
 					/>
 				</mesh>
-				{/* Face: Eyes */}
-				<mesh position={[-0.07, 0.68, 0.18]}>
-					<sphereGeometry args={[0.025, 8, 8]} />
-					<meshStandardMaterial color={'#222'} />
+				{/* Face: Eyes (large, anime-style) */}
+				<mesh
+					position={[-0.07, 0.78, 0.05]}
+					scale={[1, 1.7, 1]}
+				>
+					<sphereGeometry args={[0.045, 16, 16]} />
+					<meshStandardMaterial color={'#2196f3'} />
 				</mesh>
-				<mesh position={[0.07, 0.68, 0.18]}>
-					<sphereGeometry args={[0.025, 8, 8]} />
-					<meshStandardMaterial color={'#222'} />
+				<mesh
+					position={[0.07, 0.78, 0.05]}
+					scale={[1, 1.7, 1]}
+				>
+					<sphereGeometry args={[0.045, 16, 16]} />
+					<meshStandardMaterial color={'#2196f3'} />
+				</mesh>
+				{/* Smile (macaroni noodle */}
+				<mesh
+					position={[0, 0.65, 0.05]}
+					rotation={[Math.PI * 1.0, 0, 0]}
+				>
+					<torusGeometry
+						args={[0.09, 0.018, 22, 80, Math.PI * 1]}
+					/>
+					<meshStandardMaterial color={'#e53935'} />
 				</mesh>
 				{/* Belly: round sphere, slightly larger than head */}
 				<mesh
@@ -216,9 +254,9 @@ export function StickFigure({
 					<sphereGeometry args={[0.18, 16, 16]} />
 					<meshStandardMaterial color={bodyColor} />
 				</mesh>
-				{/* Body: thinner cylinder connecting head and belly */}
+				{/* Body: thinner cylinder connecting head and belly (reduced neck width) */}
 				<mesh position={[0, 0.35, 0]}>
-					<cylinderGeometry args={[0.07, 0.07, 0.3, 16]} />
+					<cylinderGeometry args={[0.05, 0.045, 0.3, 16]} />
 					<meshStandardMaterial color={bodyColor} />
 				</mesh>
 				{/* Arms (swing with bounce and wave) */}
