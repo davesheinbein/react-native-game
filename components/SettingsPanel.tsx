@@ -32,6 +32,7 @@ export interface SettingsPanelProps {
 	onResetHighScore: () => void;
 	musicTitle: string;
 	musicIndex: number;
+	onHowToPlay: () => void; // NEW: prop for navigating to HowToPlay
 }
 
 export function SettingsPanel({
@@ -48,6 +49,7 @@ export function SettingsPanel({
 	onResetHighScore,
 	musicTitle,
 	musicIndex,
+	onHowToPlay, // NEW: destructure the onHowToPlay prop
 }: SettingsPanelProps) {
 	const [cheatModalOpen, setCheatModalOpen] =
 		React.useState(false);
@@ -92,20 +94,6 @@ export function SettingsPanel({
 							size={32}
 							color='#ffd600'
 						/>
-					</TouchableOpacity>
-					{/* Rules icon button */}
-					<TouchableOpacity
-						onPress={() => setRulesModalOpen(true)}
-						accessibilityRole='button'
-						accessibilityLabel='Show game rules and how to play'
-						style={styles.iconBtn}
-					>
-						<MaterialCommunityIcons
-							name='book-open-variant'
-							size={26}
-							color='#ffd600'
-						/>
-						<Text style={styles.cheatLabel}>Rules</Text>
 					</TouchableOpacity>
 					{/* Music play/pause */}
 					<TouchableOpacity
@@ -244,16 +232,34 @@ export function SettingsPanel({
 							Cheatcodes
 						</Text>
 					</TouchableOpacity>
+					{/* How to Play button */}
+					<TouchableOpacity
+						onPress={onHowToPlay}
+						accessibilityRole='button'
+						accessibilityLabel='How to play instructions'
+						style={styles.iconBtn}
+					>
+						<MaterialCommunityIcons
+							name='help-circle-outline'
+							size={26}
+							color='#ffd600'
+						/>
+						<Text style={styles.cheatLabel}>
+							How to Play
+						</Text>
+					</TouchableOpacity>
 				</View>
 			}
 			<CheatcodesModal
 				visible={cheatModalOpen}
 				onClose={() => setCheatModalOpen(false)}
 			/>
-			<GameRulesModal
-				visible={rulesModalOpen}
-				onClose={() => setRulesModalOpen(false)}
-			/>
+			{isOpen && (
+				<GameRulesModal
+					visible={rulesModalOpen}
+					onClose={() => setRulesModalOpen(false)}
+				/>
+			)}
 		</View>
 	);
 }

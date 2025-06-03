@@ -72,10 +72,13 @@ export function HighScoreModal({
 						style={styles.header}
 						accessibilityRole='header'
 					>
-						{isGlobal ? 'New Global High Score!' : 'New High Score!'}
+						{isGlobal ?
+							'New Global High Score!'
+						:	'New High Score!'}
 					</Text>
 					<Text style={styles.subtitle}>
-						Enter your name to record your score of {score} in {mode} mode:
+						Enter your name to record your score of {score}{' '}
+						in {mode} mode:
 					</Text>
 					<TextInput
 						style={[
@@ -97,7 +100,8 @@ export function HighScoreModal({
 					<TouchableOpacity
 						style={[
 							styles.submitButton,
-							(!name.trim() || submitting) && styles.submitButtonDisabled,
+							(!name.trim() || submitting) &&
+								styles.submitButtonDisabled,
 						]}
 						onPress={handleSubmit}
 						disabled={!name.trim() || submitting}
@@ -122,7 +126,8 @@ export function HighScoreModal({
 							<Text
 								style={[
 									styles.submitButtonText,
-									(!name.trim() || submitting) && styles.submitButtonTextDisabled,
+									(!name.trim() || submitting) &&
+										styles.submitButtonTextDisabled,
 								]}
 							>
 								Submit
@@ -136,7 +141,9 @@ export function HighScoreModal({
 						</Text>
 						<FlatList
 							data={localScores.slice(0, 10)}
-							keyExtractor={(item, idx) => item.name + item.score + idx}
+							keyExtractor={(item, idx) =>
+								item.name + item.score + idx
+							}
 							renderItem={({ item, index }) => (
 								<Text style={styles.scoreEntry}>
 									{index + 1}. {item.name} - {item.score}
@@ -150,10 +157,13 @@ export function HighScoreModal({
 								</Text>
 								<FlatList
 									data={globalScores.slice(0, 10)}
-									keyExtractor={(item, idx) => item.name + item.score + idx}
+									keyExtractor={(item, idx) =>
+										item.name + item.score + idx
+									}
 									renderItem={({ item, index }) => (
 										<Text style={styles.scoreEntry}>
-											{index + 1}. {item.name} - {item.score}
+											{index + 1}. {item.name} -{' '}
+											{item.score}
 										</Text>
 									)}
 								/>

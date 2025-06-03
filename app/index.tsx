@@ -1,11 +1,9 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import { Button, Text, View } from 'react-native';
-import HowToPlayModal from '../components/HowToPlayModal';
 
 export default function MainMenu() {
 	const router = useRouter();
-	const [showHowTo, setShowHowTo] = useState(false);
 	return (
 		<View
 			style={{
@@ -45,15 +43,11 @@ export default function MainMenu() {
 			/>
 			<Button
 				title='How to Play'
-				onPress={() => setShowHowTo(true)}
+				onPress={() => router.push('/RulesScreen')}
 			/>
 			<Button
 				title='Settings'
 				onPress={() => router.push('/SettingsScreen')}
-			/>
-			<HowToPlayModal
-				visible={showHowTo}
-				onClose={() => setShowHowTo(false)}
 			/>
 		</View>
 	);
